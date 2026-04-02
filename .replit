@@ -24,10 +24,6 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 23637
-externalPort = 3001
-
-[[ports]]
 localPort = 24679
 externalPort = 3002
 
@@ -67,6 +63,3 @@ waitForPort = 5000
 [userenv.shared]
 PORT = "5000"
 NODE_ENV = "development"
-HOLD_TTL_SHORT_SECONDS = "60"
-HOLD_TTL_LONG_SECONDS = "1200"
-PENDING_BOOKING_AUTO_RELEASE = "true"

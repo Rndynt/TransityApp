@@ -1,9 +1,8 @@
 node_modules
 dist
+dist-server
 .git
 .gitignore
-*.md
+.env
 attached_assets
-apps/mobile
-artifacts
 .local
