@@ -245,11 +245,12 @@ interface GatewaySearchResponse {
 
 export const tripsApi = {
   getCities: async (): Promise<string[]> => {
-    const res = await api.get<{ cities: string[]; byOperator?: unknown[] } | { city: string; stopCount: number }[]>('/api/gateway/cities');
+    const res = await api.get<{ cities: ({ city: string; stopCount: number } | string)[]; byOperator?: unknown[] } | ({ city: string; stopCount: number } | string)[]>('/api/gateway/cities');
     if (Array.isArray(res)) {
-      return res.map((c) => c.city);
+      return res.map((c) => (typeof c === 'string' ? c : c.city));
     }
-    return (res as { cities: string[] }).cities || [];
+    const citiesData = (res as { cities: ({ city: string; stopCount: number } | string)[] }).cities || [];
+    return citiesData.map((c) => (typeof c === 'string' ? c : c.city));
   },
 
   search: async (params: { originCity: string; destinationCity: string; date: string; passengers?: number; page?: number; limit?: number }): Promise<TripSearchResult[]> => {
