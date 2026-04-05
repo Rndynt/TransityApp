@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useNav } from '@/App';
-import { tripsApi, type TripSearchResult, type TripStopInfo } from '@/lib/api';
+import { tripsApi, type TripSearchResult } from '@/lib/api';
 import { fmtCurrency, fmtTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, SearchX, Clock, MapPin, ChevronDown, ChevronUp, Bus, Users, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Loader2, SearchX, Clock, MapPin, ChevronDown, ChevronUp, Users, CheckCircle2, Building2, Zap } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -56,14 +56,15 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
   }, [loadMore]);
 
   const selectTrip = (trip: TripSearchResult) => {
-    const fare = trip.farePerPerson || parseFloat(trip.baseFare || '0') || 0;
+    const tripLabel = `${trip.operatorName} · ${trip.origin?.cityName || originCity} → ${trip.destination?.cityName || destinationCity}`;
     navigate({
       name: 'select-stops',
       tripId: trip.tripId,
+      serviceDate: trip.serviceDate,
       passengers,
-      tripLabel: `${trip.patternName || trip.patternCode}`,
-      fare,
-      stops: trip.stops || [],
+      tripLabel,
+      fare: trip.farePerPerson,
+      stops: [],
       originCity,
       destCity: destinationCity,
       originSeq: trip.origin?.sequence || 0,
@@ -104,7 +105,7 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
             <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center">
               <Loader2 className="w-7 h-7 animate-spin text-teal-600" />
             </div>
-            <p className="text-[13px] text-slate-400 font-medium">Mencari perjalanan...</p>
+            <p className="text-[13px] text-slate-400 font-medium">Mencari perjalanan dari semua operator...</p>
           </div>
         )}
 
@@ -163,10 +164,10 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
   );
 }
 
-function getDurationLabel(departAt?: string, arriveAt?: string): string {
-  if (!departAt || !arriveAt) return '';
-  const d1 = new Date(departAt).getTime();
-  const d2 = new Date(arriveAt).getTime();
+function getDurationLabel(departureTime?: string | null, arrivalTime?: string | null): string {
+  if (!departureTime || !arrivalTime) return '';
+  const d1 = new Date(departureTime).getTime();
+  const d2 = new Date(arrivalTime).getTime();
   if (isNaN(d1) || isNaN(d2)) return '';
   const diff = Math.abs(d2 - d1);
   const h = Math.floor(diff / 3600000);
@@ -180,10 +181,7 @@ function TripCard({ trip, index, passengers, onSelect }: {
   trip: TripSearchResult; index: number; passengers: number; onSelect: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const fare = trip.farePerPerson || parseFloat(trip.baseFare || '0') || 0;
-  const allStops = trip.stops || [];
-  const duration = getDurationLabel(trip.origin?.departAt, trip.destination?.arriveAt);
-  const intermediateStops = Math.max(allStops.length - 2, 0);
+  const duration = getDurationLabel(trip.origin?.departureTime, trip.destination?.departureTime);
   const isFull = trip.availableSeats < passengers;
 
   return (
@@ -194,35 +192,58 @@ function TripCard({ trip, index, passengers, onSelect }: {
     >
       <div className="p-4 pb-3">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-7 h-7 rounded-lg bg-teal-50 flex items-center justify-center shrink-0">
-            <Bus className="w-3.5 h-3.5 text-teal-600" />
-          </div>
+          {trip.operatorLogo ? (
+            <img
+              src={trip.operatorLogo}
+              alt={trip.operatorName}
+              className="w-7 h-7 rounded-lg object-contain bg-slate-50 border border-slate-100"
+            />
+          ) : (
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+              style={{ backgroundColor: trip.operatorColor ? `${trip.operatorColor}20` : undefined }}
+            >
+              <Building2
+                className="w-3.5 h-3.5"
+                style={{ color: trip.operatorColor || '#0d9488' }}
+              />
+            </div>
+          )}
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-[13px] text-slate-700 truncate leading-tight">{trip.patternName || trip.patternCode}</p>
+            <p className="font-bold text-[13px] text-slate-700 truncate leading-tight">{trip.operatorName}</p>
             {trip.vehicleClass && (
               <p className="text-[10px] text-slate-400 font-medium mt-0.5">{trip.vehicleClass}</p>
             )}
           </div>
-          <div className="text-right shrink-0">
-            <p className="font-extrabold text-[18px] text-teal-700 font-display leading-none">{fmtCurrency(fare)}</p>
-            <p className="text-[10px] text-slate-400 font-medium">/orang</p>
+          <div className="flex flex-col items-end shrink-0 gap-0.5">
+            <div className="text-right">
+              <p className="font-extrabold text-[18px] text-teal-700 font-display leading-none">{fmtCurrency(trip.farePerPerson)}</p>
+              <p className="text-[10px] text-slate-400 font-medium">/orang</p>
+            </div>
+            {trip.isVirtual && (
+              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md">
+                <Zap className="w-2.5 h-2.5" />
+                Virtual
+              </span>
+            )}
           </div>
         </div>
 
         <div className="flex items-stretch gap-3">
           <div className="flex flex-col items-center shrink-0 w-[52px]">
-            <p className="font-bold text-[22px] text-slate-900 leading-none font-display">{fmtTime(trip.origin?.departAt)}</p>
+            <p className="font-bold text-[22px] text-slate-900 leading-none font-display">{fmtTime(trip.origin?.departureTime)}</p>
             <div className="flex-1 flex flex-col items-center py-1.5">
               <div className="w-[9px] h-[9px] rounded-full border-[2.5px] border-teal-500 bg-white" />
               <div className="flex-1 w-[2px] bg-gradient-to-b from-teal-400 to-coral-400 rounded-full my-0.5" style={{ minHeight: 24 }} />
               <div className="w-[9px] h-[9px] rounded-full bg-coral-500" />
             </div>
-            <p className="font-bold text-[22px] text-slate-900 leading-none font-display">{fmtTime(trip.destination?.arriveAt)}</p>
+            <p className="font-bold text-[22px] text-slate-900 leading-none font-display">{fmtTime(trip.destination?.departureTime)}</p>
           </div>
 
           <div className="flex-1 flex flex-col justify-between min-w-0 py-0.5">
             <div>
-              <p className="font-semibold text-[13px] text-slate-800 truncate">{trip.origin?.name}</p>
+              <p className="font-semibold text-[13px] text-slate-800 truncate">{trip.origin?.stopName}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">{trip.origin?.cityName}</p>
             </div>
 
             <div className="flex items-center gap-2 my-1">
@@ -232,29 +253,32 @@ function TripCard({ trip, index, passengers, onSelect }: {
                   {duration}
                 </span>
               )}
-              {intermediateStops > 0 && (
+              {trip.isVirtual && (
                 <button
                   onClick={() => setExpanded(!expanded)}
-                  className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-teal-600 bg-teal-50/60 rounded-md px-2 py-0.5 hover:bg-teal-50 transition-colors"
+                  className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-600 bg-amber-50/60 rounded-md px-2 py-0.5 hover:bg-amber-50 transition-colors"
                   data-testid={`button-expand-stops-${trip.tripId}`}
                 >
                   <MapPin className="w-3 h-3" />
-                  {intermediateStops} transit
+                  Rute dinamis
                   {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                 </button>
               )}
             </div>
 
             <div>
-              <p className="font-semibold text-[13px] text-slate-800 truncate">{trip.destination?.name}</p>
+              <p className="font-semibold text-[13px] text-slate-800 truncate">{trip.destination?.stopName}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">{trip.destination?.cityName}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {expanded && allStops.length > 0 && (
+      {expanded && (
         <div className="px-4 pb-3">
-          <StopsTimeline stops={allStops} />
+          <div className="bg-amber-50 rounded-xl p-3 text-[12px] text-amber-700 font-medium">
+            Rute virtual — titik naik & turun akan dikonfirmasi dengan operator.
+          </div>
         </div>
       )}
 
@@ -281,51 +305,6 @@ function TripCard({ trip, index, passengers, onSelect }: {
         >
           {isFull ? 'Penuh' : 'Pilih'}
         </Button>
-      </div>
-    </div>
-  );
-}
-
-function StopsTimeline({ stops }: { stops: TripStopInfo[] }) {
-  return (
-    <div className="bg-slate-50 rounded-xl p-3 anim-fade">
-      <div className="relative pl-5">
-        <div className="absolute left-[7px] top-2 bottom-2 w-[2px] bg-gradient-to-b from-teal-400 via-teal-300 to-coral-400 rounded-full" />
-        {stops.map((stop, i) => {
-          const isFirst = i === 0;
-          const isLast = i === stops.length - 1;
-          const time = isFirst ? stop.departAt : stop.arriveAt;
-          return (
-            <div key={stop.stopId} className="relative flex items-start gap-3 pb-3 last:pb-0">
-              <div className="absolute left-[-17px] top-[5px]">
-                {isFirst || isLast ? (
-                  <div className={cn(
-                    'w-[10px] h-[10px] rounded-full border-2',
-                    isFirst ? 'border-teal-500 bg-white' : 'bg-coral-500 border-coral-500',
-                  )} />
-                ) : (
-                  <div className="w-[8px] h-[8px] rounded-full bg-teal-300 border border-white ml-[1px]" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline justify-between gap-2">
-                  <p className={cn(
-                    'text-[12px] truncate',
-                    (isFirst || isLast) ? 'font-bold text-slate-800' : 'font-medium text-slate-500',
-                  )}>
-                    {stop.name}
-                  </p>
-                  <span className={cn(
-                    'shrink-0 text-[12px] tabular-nums',
-                    (isFirst || isLast) ? 'font-bold text-slate-800' : 'font-medium text-slate-400',
-                  )}>
-                    {fmtTime(time)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
       </div>
     </div>
   );

@@ -14,10 +14,10 @@ import { cn } from '@/lib/utils';
 type Page =
   | { name: 'home' }
   | { name: 'search-results'; originCity: string; destinationCity: string; date: string; passengers: number }
-  | { name: 'select-stops'; tripId: string; passengers: number; tripLabel: string; fare: number; stops: import('@/lib/api').TripStopInfo[]; originCity: string; destCity: string; originSeq: number; destSeq: number }
-  | { name: 'select-seats'; tripId: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; passengers: number; tripLabel: string; fare: number }
-  | { name: 'booking-confirm'; tripId: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; seats: string[]; tripLabel: string; fare: number }
-  | { name: 'booking-detail'; bookingId: string }
+  | { name: 'select-stops'; tripId: string; serviceDate: string; passengers: number; tripLabel: string; fare: number; stops?: import('@/lib/api').TripStopInfo[]; originCity: string; destCity: string; originSeq: number; destSeq: number }
+  | { name: 'select-seats'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; passengers: number; tripLabel: string; fare: number }
+  | { name: 'booking-confirm'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; seats: string[]; tripLabel: string; fare: number }
+  | { name: 'booking-detail'; bookingId: string; source?: 'gateway' | 'terminal' }
   | { name: 'my-trips' }
   | { name: 'auth'; returnTo?: Page };
 
@@ -100,7 +100,7 @@ function PageRouter() {
     case 'select-stops': return <SelectStopsPage {...page} />;
     case 'select-seats': return <SelectSeatsPage {...page} />;
     case 'booking-confirm': return <BookingConfirmPage {...page} />;
-    case 'booking-detail': return <BookingDetailPage {...page} />;
+    case 'booking-detail': return <BookingDetailPage bookingId={page.bookingId} source={page.source} />;
     case 'my-trips': return <MyTripsPage />;
     case 'auth': return <AuthPage returnTo={page.returnTo} />;
     default: return <HomePage />;

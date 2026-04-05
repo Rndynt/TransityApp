@@ -5,12 +5,13 @@ import { fmtCurrency, fmtTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, QrCode, MapPin, Users, XCircle, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Loader2, QrCode, Users, XCircle, CheckCircle2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { cn } from '@/lib/utils';
 
 interface Props {
   bookingId: string;
+  source?: 'gateway' | 'terminal';
 }
 
 const STATUS_CFG: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'destructive' | 'secondary'; icon: typeof CheckCircle2 }> = {
@@ -21,13 +22,15 @@ const STATUS_CFG: Record<string, { label: string; variant: 'default' | 'success'
   expired: { label: 'Kedaluwarsa', variant: 'destructive', icon: XCircle },
 };
 
-export default function BookingDetailPage({ bookingId }: Props) {
+export default function BookingDetailPage({ bookingId, source }: Props) {
   const { goBack } = useNav();
   const queryClient = useQueryClient();
 
   const { data: booking, isLoading, error } = useQuery({
-    queryKey: ['booking', bookingId],
-    queryFn: () => bookingsApi.getDetail(bookingId),
+    queryKey: ['booking', bookingId, source],
+    queryFn: () => source === 'gateway'
+      ? bookingsApi.getGatewayDetail(bookingId)
+      : bookingsApi.getDetail(bookingId),
   });
 
   const cancelMutation = useMutation({
@@ -74,7 +77,7 @@ export default function BookingDetailPage({ bookingId }: Props) {
       <div className="px-4 pt-4 pb-8">
         <div className="bg-white rounded-2xl shadow-soft overflow-hidden anim-slide-up">
           <div className="p-4">
-            <p className="font-bold text-[16px] text-slate-800 mb-3">{booking.patternName || booking.patternCode}</p>
+            <p className="font-bold text-[16px] text-slate-800 mb-3">{booking.patternName || booking.patternCode || booking.operatorName || 'Detail Perjalanan'}</p>
             <div className="flex items-start gap-3">
               <div className="flex flex-col items-center mt-1.5">
                 <div className="w-2.5 h-2.5 rounded-full border-2 border-teal-500" />

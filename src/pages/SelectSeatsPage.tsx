@@ -4,11 +4,12 @@ import { useNav, useAuth } from '@/App';
 import { tripsApi } from '@/lib/api';
 import { fmtCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Props {
   tripId: string;
+  serviceDate: string;
   originStopId: string;
   destStopId: string;
   originSeq: number;
@@ -18,7 +19,7 @@ interface Props {
   fare: number;
 }
 
-export default function SelectSeatsPage({ tripId, originStopId, destStopId, originSeq, destSeq, passengers, tripLabel, fare }: Props) {
+export default function SelectSeatsPage({ tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, passengers, tripLabel, fare }: Props) {
   const { navigate, goBack } = useNav();
   const { isLoggedIn } = useAuth();
   const [selected, setSelected] = useState<string[]>([]);
@@ -26,6 +27,7 @@ export default function SelectSeatsPage({ tripId, originStopId, destStopId, orig
   const { data, isLoading, error } = useQuery({
     queryKey: ['seatmap', tripId, originSeq, destSeq],
     queryFn: () => tripsApi.getSeatmap(tripId, originSeq, destSeq),
+    retry: false,
   });
 
   const toggleSeat = (label: string) => {
@@ -36,10 +38,10 @@ export default function SelectSeatsPage({ tripId, originStopId, destStopId, orig
     });
   };
 
-  const proceed = () => {
+  const proceed = (seats: string[]) => {
     const target = {
       name: 'booking-confirm' as const,
-      tripId, originStopId, destStopId, originSeq, destSeq, seats: selected, tripLabel, fare,
+      tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, seats, tripLabel, fare,
     };
     if (!isLoggedIn) {
       navigate({ name: 'auth', returnTo: target });
@@ -74,6 +76,10 @@ export default function SelectSeatsPage({ tripId, originStopId, destStopId, orig
   }
 
   const hasSeatData = seatGrid.length > 0;
+  const isVirtualTrip = !!error;
+
+  const generateVirtualSeats = (count: number): string[] =>
+    Array.from({ length: count }, (_, i) => `${Math.ceil((i + 1) / 4)}${String.fromCharCode(65 + (i % 4))}`);
 
   return (
     <div className="anim-fade min-h-screen bg-slate-50">
@@ -86,9 +92,11 @@ export default function SelectSeatsPage({ tripId, originStopId, destStopId, orig
             <p className="text-white font-semibold text-[15px]">Pilih Kursi</p>
             <p className="text-teal-300 text-[12px] mt-0.5 truncate">{tripLabel}</p>
           </div>
-          <div className="bg-white/15 backdrop-blur px-3 py-1.5 rounded-full">
-            <span className="text-white text-[13px] font-bold">{selected.length}/{passengers}</span>
-          </div>
+          {!isVirtualTrip && (
+            <div className="bg-white/15 backdrop-blur px-3 py-1.5 rounded-full">
+              <span className="text-white text-[13px] font-bold">{selected.length}/{passengers}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -100,7 +108,24 @@ export default function SelectSeatsPage({ tripId, originStopId, destStopId, orig
           </div>
         )}
 
-        {error && <p className="text-center py-16 text-[14px] text-slate-400">Gagal memuat denah kursi</p>}
+        {!isLoading && isVirtualTrip && (
+          <div className="bg-white rounded-2xl shadow-soft p-6 anim-slide-up text-center">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
+              <Zap className="w-7 h-7 text-amber-500" />
+            </div>
+            <p className="font-bold text-[16px] text-slate-800 mb-1">Perjalanan Virtual</p>
+            <p className="text-[13px] text-slate-500 leading-relaxed mb-5">
+              Nomor kursi akan ditentukan oleh operator saat keberangkatan. Lanjutkan pemesanan tanpa memilih kursi.
+            </p>
+            <Button
+              className="w-full h-12 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[14px] font-bold"
+              onClick={() => proceed([])}
+              data-testid="button-continue-virtual"
+            >
+              Lanjutkan Tanpa Pilih Kursi
+            </Button>
+          </div>
+        )}
 
         {!isLoading && !error && !hasSeatData && (
           <p className="text-center py-16 text-[14px] text-slate-400">Denah kursi tidak tersedia</p>
@@ -165,24 +190,26 @@ export default function SelectSeatsPage({ tripId, originStopId, destStopId, orig
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 safe-bottom z-40">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[11px] text-slate-400 font-medium">Total ({selected.length} kursi)</p>
-              <p className="font-display font-extrabold text-[20px] text-teal-900">{fmtCurrency(fare * selected.length)}</p>
+      {!isVirtualTrip && !isLoading && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 safe-bottom z-40">
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] text-slate-400 font-medium">Total ({selected.length} kursi)</p>
+                <p className="font-display font-extrabold text-[20px] text-teal-900">{fmtCurrency(fare * selected.length)}</p>
+              </div>
+              <Button
+                className="h-12 px-8 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[14px] font-bold shadow-lg shadow-teal-900/15 transition-all active:scale-[0.97]"
+                disabled={selected.length !== passengers}
+                onClick={() => proceed(selected)}
+                data-testid="button-continue"
+              >
+                Lanjutkan
+              </Button>
             </div>
-            <Button
-              className="h-12 px-8 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[14px] font-bold shadow-lg shadow-teal-900/15 transition-all active:scale-[0.97]"
-              disabled={selected.length !== passengers}
-              onClick={proceed}
-              data-testid="button-continue"
-            >
-              Lanjutkan
-            </Button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

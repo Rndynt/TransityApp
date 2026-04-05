@@ -1,28 +1,50 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNav } from '@/App';
-import type { TripStopInfo } from '@/lib/api';
+import { tripsApi, type TripStopInfo } from '@/lib/api';
 import { fmtTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CircleDot, Flag, Check } from 'lucide-react';
+import { ArrowLeft, CircleDot, Flag, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Props {
   tripId: string;
+  serviceDate: string;
   passengers: number;
   tripLabel: string;
   fare: number;
-  stops: TripStopInfo[];
+  stops?: TripStopInfo[];
   originCity: string;
   destCity: string;
   originSeq: number;
   destSeq: number;
 }
 
-export default function SelectStopsPage({ tripId, passengers, tripLabel, fare, stops, originCity, destCity, originSeq, destSeq }: Props) {
+export default function SelectStopsPage({ tripId, serviceDate, passengers, tripLabel, fare, stops: passedStops, originCity, destCity, originSeq, destSeq }: Props) {
   const { navigate, goBack } = useNav();
   const [pickupStopId, setPickupStopId] = useState<string | null>(null);
   const [dropStopId, setDropStopId] = useState<string | null>(null);
   const [mode, setMode] = useState<'pickup' | 'drop'>('pickup');
+
+  const needsFetch = !passedStops || passedStops.length === 0;
+
+  const { data: tripDetail, isLoading: detailLoading } = useQuery({
+    queryKey: ['trip-detail', tripId],
+    queryFn: () => tripsApi.getDetail(tripId),
+    enabled: needsFetch,
+  });
+
+  const stops: TripStopInfo[] = needsFetch
+    ? (tripDetail?.stops?.map((s) => ({
+        stopId: s.stopId,
+        name: s.name,
+        code: s.code,
+        city: s.city || undefined,
+        sequence: s.sequence,
+        arriveAt: s.arriveAt,
+        departAt: s.departAt,
+      })) || [])
+    : passedStops!;
 
   const pickupStops = stops.filter(s => s.city ? s.city === originCity : s.sequence < destSeq);
   const dropStops = stops.filter(s => s.city ? s.city === destCity : s.sequence >= destSeq);
@@ -45,6 +67,7 @@ export default function SelectStopsPage({ tripId, passengers, tripLabel, fare, s
     navigate({
       name: 'select-seats',
       tripId,
+      serviceDate,
       originStopId: pickupStop.stopId,
       destStopId: dropStop.stopId,
       originSeq: pickupStop.sequence,
@@ -56,6 +79,25 @@ export default function SelectStopsPage({ tripId, passengers, tripLabel, fare, s
   };
 
   const activeStops = mode === 'pickup' ? pickupStops : dropStops;
+
+  if (detailLoading) {
+    return (
+      <div className="anim-fade min-h-screen bg-slate-50">
+        <div className="bg-teal-900 px-4 pt-3 pb-4">
+          <div className="flex items-center gap-3">
+            <button onClick={goBack} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10">
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <p className="text-white font-semibold text-[15px]">Pilih Titik Naik & Turun</p>
+          </div>
+        </div>
+        <div className="flex flex-col items-center justify-center py-32 gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+          <p className="text-[13px] text-slate-400 font-medium">Memuat rute perjalanan...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="anim-fade min-h-screen bg-slate-50">
@@ -131,6 +173,12 @@ export default function SelectStopsPage({ tripId, passengers, tripLabel, fare, s
             : `Pilih titik turun (${dropStops.length} halte)`
           }
         </p>
+
+        {activeStops.length === 0 && (
+          <div className="text-center py-12 text-[13px] text-slate-400">
+            Tidak ada halte tersedia untuk kota ini
+          </div>
+        )}
 
         <div className="grid gap-2.5">
           {activeStops.map((stop) => {

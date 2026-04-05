@@ -42,7 +42,7 @@ export default function HomePage() {
 
   useEffect(() => {
     tripsApi.getCities()
-      .then((res) => setCities(res.map((c) => c.city)))
+      .then((cities) => setCities(cities))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);

@@ -6,6 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = parseInt(process.env.PORT || process.env.TRANSITYWEB_PORT || '5000', 10);
 const API_UPSTREAM = process.env.API_UPSTREAM || 'https://nusa-terminal.transity.web.id';
+const CONSOLE_URL = process.env.CONSOLE_URL || '';
 
 const app = Fastify({ logger: false });
 
@@ -14,41 +15,45 @@ app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body,
 });
 
 app.addHook('onRequest', async (req, reply) => {
-  if (req.url.startsWith('/api/')) {
-    const upstream = `${API_UPSTREAM}${req.url}`;
-    try {
-      const headers: Record<string, string> = {};
-      const ct = req.headers['content-type'];
-      if (ct) headers['content-type'] = ct;
-      const authHeader = req.headers['authorization'];
-      if (authHeader) headers['authorization'] = authHeader;
+  if (!req.url.startsWith('/api/')) return;
 
-      let rawBody: string | undefined;
-      if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-        const chunks: Buffer[] = [];
-        for await (const chunk of req.raw) {
-          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-        }
-        rawBody = Buffer.concat(chunks).toString('utf8');
+  const isGateway = req.url.startsWith('/api/gateway/');
+  const upstream = isGateway && CONSOLE_URL
+    ? `${CONSOLE_URL}${req.url}`
+    : `${API_UPSTREAM}${req.url}`;
+
+  try {
+    const headers: Record<string, string> = {};
+    const ct = req.headers['content-type'];
+    if (ct) headers['content-type'] = ct;
+    const authHeader = req.headers['authorization'];
+    if (authHeader) headers['authorization'] = authHeader;
+
+    let rawBody: string | undefined;
+    if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req.raw) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
       }
-
-      const res = await fetch(upstream, {
-        method: req.method,
-        headers,
-        body: rawBody || undefined,
-      });
-
-      const contentType = res.headers.get('content-type') || '';
-      const body = contentType.includes('json') ? await res.json() : await res.text();
-
-      reply.status(res.status);
-      if (contentType) reply.header('content-type', contentType);
-      reply.send(body);
-    } catch {
-      reply.status(502).send({ error: 'Layanan tidak tersedia' });
+      rawBody = Buffer.concat(chunks).toString('utf8');
     }
-    return reply;
+
+    const res = await fetch(upstream, {
+      method: req.method,
+      headers,
+      body: rawBody || undefined,
+    });
+
+    const contentType = res.headers.get('content-type') || '';
+    const body = contentType.includes('json') ? await res.json() : await res.text();
+
+    reply.status(res.status);
+    if (contentType) reply.header('content-type', contentType);
+    reply.send(body);
+  } catch {
+    reply.status(502).send({ error: 'Layanan tidak tersedia' });
   }
+  return reply;
 });
 
 async function start() {
@@ -84,7 +89,8 @@ async function start() {
 
   await app.listen({ port: PORT, host: '0.0.0.0' });
   console.log(`[transityweb] running on port ${PORT} (${isProd ? 'production' : 'development'})`);
-  console.log(`[transityweb] API upstream: ${API_UPSTREAM}`);
+  console.log(`[transityweb] API upstream (app): ${API_UPSTREAM}`);
+  console.log(`[transityweb] Console URL (gateway): ${CONSOLE_URL || '(fallback to API_UPSTREAM)'}`);
 }
 
 start().catch((err) => {

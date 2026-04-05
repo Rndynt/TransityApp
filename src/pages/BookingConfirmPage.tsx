@@ -6,10 +6,11 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, MapPin, User, CreditCard } from 'lucide-react';
+import { ArrowLeft, Loader2, User, CreditCard } from 'lucide-react';
 
 interface Props {
   tripId: string;
+  serviceDate: string;
   originStopId: string;
   destStopId: string;
   originSeq: number;
@@ -19,7 +20,7 @@ interface Props {
   fare: number;
 }
 
-export default function BookingConfirmPage({ tripId, originStopId, destStopId, originSeq, destSeq, seats, tripLabel, fare }: Props) {
+export default function BookingConfirmPage({ tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, seats, tripLabel, fare }: Props) {
   const { navigate, goBack } = useNav();
   const { user } = useAuth();
   const [passengers, setPassengers] = useState(
@@ -38,7 +39,7 @@ export default function BookingConfirmPage({ tripId, originStopId, destStopId, o
 
   const mutation = useMutation({
     mutationFn: (data: CreateBookingData) => bookingsApi.create(data),
-    onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.id }),
+    onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.bookingId, source: 'gateway' }),
     onError: (err: Error) => setError(err.message),
   });
 
@@ -53,7 +54,7 @@ export default function BookingConfirmPage({ tripId, originStopId, destStopId, o
     }
     setError('');
     mutation.mutate({
-      tripId, originStopId, destinationStopId: destStopId, originSeq, destinationSeq: destSeq,
+      tripId, serviceDate, originStopId, destinationStopId: destStopId, originSeq, destinationSeq: destSeq,
       passengers: passengers.map((p) => ({ fullName: p.fullName.trim(), phone: p.phone || undefined, seatNo: p.seatNo })),
       paymentMethod: 'cash',
     });

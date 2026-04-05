@@ -33,20 +33,27 @@ export interface TripStopInfo {
   departAt: string | null;
 }
 
+export interface GatewayStopInfo {
+  stopId: string;
+  cityName: string;
+  stopName: string;
+  sequence: number;
+  departureTime: string | null;
+}
+
 export interface TripSearchResult {
   tripId: string;
   serviceDate: string;
-  patternCode: string;
-  patternName: string;
   vehicleClass: string | null;
-  operatorName: string | null;
-  origin: (StopSummary & { stopId: string; sequence: number; departAt: string | null; arriveAt: string | null }) | null;
-  destination: (StopSummary & { stopId: string; sequence: number; departAt: string | null; arriveAt: string | null }) | null;
+  operatorName: string;
+  operatorSlug: string;
+  operatorLogo: string | null;
+  operatorColor: string | null;
+  origin: GatewayStopInfo | null;
+  destination: GatewayStopInfo | null;
   availableSeats: number;
-  baseFare: string | null;
-  farePerPerson?: number;
-  stops?: TripStopInfo[];
-  isVirtual?: boolean;
+  farePerPerson: number;
+  isVirtual: boolean;
 }
 
 export interface TripDetail {
@@ -117,10 +124,13 @@ export interface BookingListItem {
 
 export interface BookingDetail {
   id: string;
+  bookingId?: string;
   tripId: string;
   serviceDate: string | null;
   patternCode: string | null;
   patternName: string | null;
+  operatorName?: string | null;
+  operatorSlug?: string | null;
   origin: StopDetail | null;
   destination: StopDetail | null;
   departAt: string | null;
@@ -149,8 +159,28 @@ export interface BookingDetail {
   createdAt: string | null;
 }
 
+export interface GatewayBookingResponse {
+  bookingId: string;
+  externalBookingId?: string;
+  operatorId?: string;
+  operatorName?: string;
+  operatorSlug?: string;
+  status: string;
+  totalAmount: string;
+  holdExpiresAt: string | null;
+  paymentIntent: {
+    paymentId: string;
+    method: string;
+    amount: string;
+  } | null;
+  qrData: QrDataItem[];
+  passengers: PassengerInfo[];
+  tripId: string;
+}
+
 export interface CreateBookingData {
   tripId: string;
+  serviceDate: string;
   originStopId: string;
   destinationStopId: string;
   originSeq: number;
@@ -206,30 +236,65 @@ export interface TripSearchPaginatedResponse {
   hasMore: boolean;
 }
 
+interface GatewaySearchResponse {
+  trips: TripSearchResult[];
+  errors?: Array<{ operatorSlug: string; error: string }>;
+  totalOperators?: number;
+  respondedOperators?: number;
+}
+
 export const tripsApi = {
-  getCities: () => api.get<{ city: string; stopCount: number }[]>('/api/app/cities'),
-  search: async (params: { originCity: string; destinationCity: string; date: string; passengers?: number; page?: number; limit?: number }) => {
-    const qs = new URLSearchParams(params as unknown as Record<string, string>).toString();
-    const result = await api.get<TripSearchResult[] | TripSearchPaginatedResponse>(`/api/app/trips/search?${qs}`);
-    if (Array.isArray(result)) return result;
-    return result.data;
+  getCities: async (): Promise<string[]> => {
+    const res = await api.get<{ cities: string[]; byOperator?: unknown[] } | { city: string; stopCount: number }[]>('/api/gateway/cities');
+    if (Array.isArray(res)) {
+      return res.map((c) => c.city);
+    }
+    return (res as { cities: string[] }).cities || [];
   },
+
+  search: async (params: { originCity: string; destinationCity: string; date: string; passengers?: number; page?: number; limit?: number }): Promise<TripSearchResult[]> => {
+    const qs = new URLSearchParams(params as unknown as Record<string, string>).toString();
+    const result = await api.get<GatewaySearchResponse | TripSearchResult[]>(`/api/gateway/trips/search?${qs}`);
+    if (Array.isArray(result)) return result;
+    if ('trips' in result) return result.trips;
+    return [];
+  },
+
   searchPaginated: async (params: { originCity: string; destinationCity: string; date: string; passengers?: number; page: number; limit: number }): Promise<TripSearchPaginatedResponse> => {
     const qs = new URLSearchParams(params as unknown as Record<string, string>).toString();
-    const result = await api.get<TripSearchResult[] | TripSearchPaginatedResponse>(`/api/app/trips/search?${qs}`);
-    if (Array.isArray(result)) return { data: result, total: result.length, page: 1, limit: result.length, hasMore: false };
-    return result;
+    const result = await api.get<GatewaySearchResponse | TripSearchPaginatedResponse | TripSearchResult[]>(`/api/gateway/trips/search?${qs}`);
+
+    if (Array.isArray(result)) {
+      return { data: result, total: result.length, page: 1, limit: result.length, hasMore: false };
+    }
+    if ('trips' in result) {
+      const trips = result.trips;
+      const page = params.page;
+      const limit = params.limit;
+      const start = (page - 1) * limit;
+      const sliced = trips.slice(start, start + limit);
+      return {
+        data: sliced,
+        total: trips.length,
+        page,
+        limit,
+        hasMore: start + limit < trips.length,
+      };
+    }
+    return result as TripSearchPaginatedResponse;
   },
-  getDetail: (tripId: string) => api.get<TripDetail>(`/api/app/trips/${tripId}`),
+
+  getDetail: (tripId: string) => api.get<TripDetail>(`/api/gateway/trips/${tripId}`),
   getSeatmap: (tripId: string, originSeq: number, destSeq: number) =>
-    api.get<SeatmapResponse>(`/api/app/trips/${tripId}/seatmap?originSeq=${originSeq}&destinationSeq=${destSeq}`),
+    api.get<SeatmapResponse>(`/api/gateway/trips/${tripId}/seatmap?originSeq=${originSeq}&destinationSeq=${destSeq}`),
 };
 
 export const bookingsApi = {
   create: (data: CreateBookingData) =>
-    api.post<BookingDetail>('/api/app/bookings', data as unknown as Record<string, unknown>),
+    api.post<GatewayBookingResponse>('/api/gateway/bookings', data as unknown as Record<string, unknown>),
   list: () => api.get<BookingListItem[]>('/api/app/bookings'),
   getDetail: (id: string) => api.get<BookingDetail>(`/api/app/bookings/${id}`),
+  getGatewayDetail: (bookingId: string) => api.get<BookingDetail>(`/api/gateway/bookings/${bookingId}`),
   cancel: (id: string) => api.post<{ success: boolean }>(`/api/app/bookings/${id}/cancel`, {}),
 };
 
