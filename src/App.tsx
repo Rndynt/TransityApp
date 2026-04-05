@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 
 type Page =
   | { name: 'home' }
-  | { name: 'search-results'; originCity: string; destinationCity: string; date: string; passengers: number }
+  | { name: 'search-results'; originCity: string; destinationCity: string; date: string; passengers: number; operatorFilter?: string | null }
   | { name: 'select-stops'; tripId: string; serviceDate: string; passengers: number; tripLabel: string; fare: number; stops?: import('@/lib/api').TripStopInfo[]; originCity: string; destCity: string; originSeq: number; destSeq: number }
   | { name: 'select-seats'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; passengers: number; tripLabel: string; fare: number }
   | { name: 'booking-confirm'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; seats: string[]; tripLabel: string; fare: number }

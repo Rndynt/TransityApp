@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNav, useAuth } from '@/App';
-import { tripsApi } from '@/lib/api';
+import { tripsApi, type OperatorInfo } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { ArrowDownUp, Search, Loader2, MapPin, CalendarDays, Users, X, Percent, Star, ArrowRight } from 'lucide-react';
+import OperatorLogo from '@/components/OperatorLogo';
+import { ArrowDownUp, Search, Loader2, MapPin, CalendarDays, Users, X, Percent, Star, ArrowRight, Bus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const CITY_IMAGES: Record<string, string> = {
@@ -33,6 +34,7 @@ export default function HomePage() {
   const { navigate } = useNav();
   const { user } = useAuth();
   const [cities, setCities] = useState<string[]>([]);
+  const [operators, setOperators] = useState<OperatorInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [origin, setOriginRaw] = useState(() => sessionStorage.getItem('t_origin') || '');
   const [destination, setDestinationRaw] = useState(() => sessionStorage.getItem('t_dest') || '');
@@ -45,6 +47,7 @@ export default function HomePage() {
     const n = parseInt(sessionStorage.getItem('t_pax') || '1', 10);
     return (isNaN(n) || n < 1 || n > 10) ? 1 : n;
   });
+  const [selectedOperator, setSelectedOperator] = useState<string | null>(null);
   const [sheetFor, setSheetFor] = useState<'origin' | 'destination' | null>(null);
 
   const setOrigin = (v: string) => { setOriginRaw(v); sessionStorage.setItem('t_origin', v); };
@@ -53,8 +56,8 @@ export default function HomePage() {
   const setPassengers = (v: number) => { setPassengersRaw(v); sessionStorage.setItem('t_pax', String(v)); };
 
   useEffect(() => {
-    tripsApi.getCities()
-      .then((cities) => setCities(cities))
+    tripsApi.getCitiesAndOperators()
+      .then(({ cities, operators }) => { setCities(cities); setOperators(operators); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -62,7 +65,7 @@ export default function HomePage() {
   const swap = () => { setOrigin(destination); setDestination(origin); };
   const search = () => {
     if (!origin || !destination || !date) return;
-    navigate({ name: 'search-results', originCity: origin, destinationCity: destination, date, passengers });
+    navigate({ name: 'search-results', originCity: origin, destinationCity: destination, date, passengers, operatorFilter: selectedOperator });
   };
 
   const selectCity = (city: string) => {
@@ -156,6 +159,42 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
+
+            {operators.length > 0 && (
+              <div className="mt-4">
+                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.08em] mb-2 block">Operator</Label>
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pb-1">
+                  <button
+                    onClick={() => setSelectedOperator(null)}
+                    className={cn(
+                      'shrink-0 flex items-center gap-2 h-10 px-4 rounded-xl border text-[13px] font-semibold transition-all active:scale-[0.97]',
+                      selectedOperator === null
+                        ? 'bg-teal-900 border-teal-900 text-white shadow-md shadow-teal-900/20'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-teal-300 hover:bg-teal-50/50'
+                    )}
+                  >
+                    <Bus className="w-4 h-4" />
+                    Semua
+                  </button>
+                  {operators.map((op) => (
+                    <button
+                      key={op.slug}
+                      onClick={() => setSelectedOperator(selectedOperator === op.slug ? null : op.slug)}
+                      className={cn(
+                        'shrink-0 flex items-center gap-2 h-10 px-3 pr-4 rounded-xl border text-[13px] font-semibold transition-all active:scale-[0.97]',
+                        selectedOperator === op.slug
+                          ? 'border-teal-600 bg-teal-50 text-teal-800 shadow-sm'
+                          : 'bg-white border-slate-200 text-slate-600 hover:border-teal-300 hover:bg-teal-50/50'
+                      )}
+                      data-testid={`filter-operator-${op.slug}`}
+                    >
+                      <OperatorLogo name={op.name} logo={op.logo} color={op.color} size="sm" />
+                      {op.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <Button
               onClick={search}

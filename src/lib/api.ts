@@ -243,14 +243,40 @@ interface GatewaySearchResponse {
   respondedOperators?: number;
 }
 
+export interface OperatorInfo {
+  slug: string;
+  name: string;
+  color: string;
+  logo: string | null;
+}
+
+interface CitiesFullResponse {
+  cities: ({ city: string; stopCount: number } | string)[];
+  byOperator?: { operatorSlug: string; operatorName?: string; operatorLogo?: string | null; operatorColor?: string; cities: unknown[] }[];
+}
+
 export const tripsApi = {
-  getCities: async (): Promise<string[]> => {
-    const res = await api.get<{ cities: ({ city: string; stopCount: number } | string)[]; byOperator?: unknown[] } | ({ city: string; stopCount: number } | string)[]>('/api/gateway/cities');
+  getCitiesAndOperators: async (): Promise<{ cities: string[]; operators: OperatorInfo[] }> => {
+    const res = await api.get<CitiesFullResponse | ({ city: string; stopCount: number } | string)[]>('/api/gateway/cities');
     if (Array.isArray(res)) {
-      return res.map((c) => (typeof c === 'string' ? c : c.city));
+      return { cities: res.map((c) => (typeof c === 'string' ? c : c.city)), operators: [] };
     }
-    const citiesData = (res as { cities: ({ city: string; stopCount: number } | string)[] }).cities || [];
-    return citiesData.map((c) => (typeof c === 'string' ? c : c.city));
+    const citiesData = res.cities || [];
+    const cities = citiesData.map((c: { city: string; stopCount: number } | string) => (typeof c === 'string' ? c : c.city));
+    const operators: OperatorInfo[] = (res.byOperator || [])
+      .filter((op) => op.operatorSlug)
+      .map((op) => ({
+        slug: op.operatorSlug,
+        name: op.operatorName || op.operatorSlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+        color: op.operatorColor || '#134E4A',
+        logo: op.operatorLogo || null,
+      }));
+    return { cities, operators };
+  },
+
+  getCities: async (): Promise<string[]> => {
+    const { cities } = await tripsApi.getCitiesAndOperators();
+    return cities;
   },
 
   search: async (params: { originCity: string; destinationCity: string; date: string; passengers?: number; page?: number; limit?: number }): Promise<TripSearchResult[]> => {

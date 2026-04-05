@@ -4,7 +4,8 @@ import { useNav } from '@/App';
 import { tripsApi, type TripSearchResult } from '@/lib/api';
 import { fmtCurrency, fmtTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, SearchX, Clock, MapPin, ChevronDown, ChevronUp, Users, CheckCircle2, Bus, ArrowRight } from 'lucide-react';
+import OperatorLogo from '@/components/OperatorLogo';
+import { ArrowLeft, Loader2, SearchX, Clock, MapPin, ChevronDown, ChevronUp, Users, CheckCircle2, ArrowRight } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -27,11 +28,13 @@ interface Props {
   destinationCity: string;
   date: string;
   passengers: number;
+  operatorFilter?: string | null;
 }
 
-export default function SearchResultsPage({ originCity, destinationCity, date, passengers }: Props) {
+export default function SearchResultsPage({ originCity, destinationCity, date, passengers, operatorFilter }: Props) {
   const { navigate, goBack } = useNav();
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const [activeFilter, setActiveFilter] = useState<string | null>(operatorFilter ?? null);
 
   const {
     data,
@@ -48,8 +51,15 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
     getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.page + 1 : undefined,
   });
 
-  const trips = data?.pages.flatMap((p) => p.data) ?? [];
-  const total = data?.pages[0]?.total ?? 0;
+  const allTrips = data?.pages.flatMap((p) => p.data) ?? [];
+  const trips = activeFilter
+    ? allTrips.filter(t => t.operatorSlug === activeFilter)
+    : allTrips;
+  const totalUnfiltered = data?.pages[0]?.total ?? 0;
+
+  const operators = Array.from(
+    new Map(allTrips.map(t => [t.operatorSlug, { slug: t.operatorSlug, name: t.operatorName, color: t.operatorColor || '#134E4A', logo: t.operatorLogo }])).values()
+  );
 
   const loadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
@@ -111,6 +121,37 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
       </div>
 
       <div className="px-4 pt-4 pb-8">
+        {!isLoading && operators.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pb-3 mb-1">
+            <button
+              onClick={() => setActiveFilter(null)}
+              className={cn(
+                'shrink-0 flex items-center gap-1.5 h-9 px-3.5 rounded-xl border text-[12px] font-semibold transition-all active:scale-[0.97]',
+                activeFilter === null
+                  ? 'bg-teal-900 border-teal-900 text-white shadow-sm'
+                  : 'bg-white border-slate-200 text-slate-500 hover:border-teal-300'
+              )}
+            >
+              Semua
+            </button>
+            {operators.map((op) => (
+              <button
+                key={op.slug}
+                onClick={() => setActiveFilter(activeFilter === op.slug ? null : op.slug)}
+                className={cn(
+                  'shrink-0 flex items-center gap-1.5 h-9 px-3 pr-3.5 rounded-xl border text-[12px] font-semibold transition-all active:scale-[0.97]',
+                  activeFilter === op.slug
+                    ? 'border-teal-600 bg-teal-50 text-teal-800 shadow-sm'
+                    : 'bg-white border-slate-200 text-slate-500 hover:border-teal-300'
+                )}
+              >
+                <OperatorLogo name={op.name} logo={op.logo} color={op.color} size="sm" className="!w-6 !h-6 !rounded-md" />
+                {op.name}
+              </button>
+            ))}
+          </div>
+        )}
+
         {isLoading && (
           <div className="flex flex-col items-center py-20 gap-3">
             <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center">
@@ -133,13 +174,23 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
               <SearchX className="w-8 h-8 text-slate-300" />
             </div>
             <p className="font-semibold text-slate-700">Tidak ada perjalanan</p>
-            <p className="text-[13px] text-slate-400 mt-1">Coba tanggal atau rute lain</p>
+            <p className="text-[13px] text-slate-400 mt-1">
+              {activeFilter ? 'Tidak ada perjalanan untuk operator ini. Coba pilih "Semua".' : 'Coba tanggal atau rute lain'}
+            </p>
+            {activeFilter && (
+              <button
+                onClick={() => setActiveFilter(null)}
+                className="mt-3 text-[13px] font-semibold text-teal-600 hover:text-teal-700"
+              >
+                Tampilkan semua operator
+              </button>
+            )}
           </div>
         )}
 
         {trips.length > 0 && (
           <p className="text-[12px] font-semibold text-slate-400 mb-3 uppercase tracking-wider">
-            {trips.length} dari {total} perjalanan
+            {activeFilter ? `${trips.length} perjalanan` : `${trips.length} dari ${totalUnfiltered} perjalanan`}
           </p>
         )}
 
@@ -226,16 +277,12 @@ function TripCard({ trip, index, passengers, originCity, destCity, onSelect }: {
       <div className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2.5">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-              style={{ backgroundColor: trip.operatorColor ? `${trip.operatorColor}15` : '#f0fdfa' }}
-            >
-              {trip.operatorLogo ? (
-                <img src={trip.operatorLogo} alt={trip.operatorName} className="w-5 h-5 object-contain" />
-              ) : (
-                <Bus className="w-4.5 h-4.5" style={{ color: trip.operatorColor || '#0d9488' }} />
-              )}
-            </div>
+            <OperatorLogo
+              name={trip.operatorName}
+              logo={trip.operatorLogo}
+              color={trip.operatorColor || '#134E4A'}
+              size="md"
+            />
             <div>
               <p className="font-bold text-[14px] text-slate-800 leading-tight">{trip.operatorName}</p>
               {svcLabel && (
