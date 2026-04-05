@@ -34,11 +34,23 @@ export default function HomePage() {
   const { user } = useAuth();
   const [cities, setCities] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [origin, setOrigin] = useState('');
-  const [destination, setDestination] = useState('');
-  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [passengers, setPassengers] = useState(1);
+  const [origin, setOriginRaw] = useState(() => sessionStorage.getItem('t_origin') || '');
+  const [destination, setDestinationRaw] = useState(() => sessionStorage.getItem('t_dest') || '');
+  const [date, setDateRaw] = useState(() => {
+    const stored = sessionStorage.getItem('t_date');
+    if (stored && /^\d{4}-\d{2}-\d{2}$/.test(stored)) return stored;
+    return new Date().toISOString().split('T')[0];
+  });
+  const [passengers, setPassengersRaw] = useState(() => {
+    const n = parseInt(sessionStorage.getItem('t_pax') || '1', 10);
+    return (isNaN(n) || n < 1 || n > 10) ? 1 : n;
+  });
   const [sheetFor, setSheetFor] = useState<'origin' | 'destination' | null>(null);
+
+  const setOrigin = (v: string) => { setOriginRaw(v); sessionStorage.setItem('t_origin', v); };
+  const setDestination = (v: string) => { setDestinationRaw(v); sessionStorage.setItem('t_dest', v); };
+  const setDate = (v: string) => { setDateRaw(v); sessionStorage.setItem('t_date', v); };
+  const setPassengers = (v: number) => { setPassengersRaw(v); sessionStorage.setItem('t_pax', String(v)); };
 
   useEffect(() => {
     tripsApi.getCities()

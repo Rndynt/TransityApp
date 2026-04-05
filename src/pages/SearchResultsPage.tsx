@@ -4,12 +4,23 @@ import { useNav } from '@/App';
 import { tripsApi, type TripSearchResult } from '@/lib/api';
 import { fmtCurrency, fmtTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, SearchX, Clock, MapPin, ChevronDown, ChevronUp, Users, CheckCircle2, Building2, Zap } from 'lucide-react';
+import { ArrowLeft, Loader2, SearchX, Clock, MapPin, ChevronDown, ChevronUp, Users, CheckCircle2, Bus, ArrowRight } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 const PAGE_LIMIT = 10;
+
+const VEHICLE_LABELS: Record<string, string> = {
+  'commuter-14': 'Commuter',
+  'premio-14': 'Premio',
+  'executive-14': 'Executive',
+};
+
+function vehicleLabel(vc: string | null | undefined): string {
+  if (!vc) return '';
+  return VEHICLE_LABELS[vc] || vc.replace(/-\d+$/, '').replace(/^\w/, c => c.toUpperCase());
+}
 
 interface Props {
   originCity: string;
@@ -77,7 +88,7 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
 
   return (
     <div className="anim-fade min-h-screen bg-slate-50">
-      <div className="hero-mesh px-4 pt-3 pb-5">
+      <div className="hero-mesh px-4 pt-3 pb-4 sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <button
             onClick={goBack}
@@ -89,7 +100,7 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 text-white font-bold text-[16px] font-display">
               <span className="truncate">{originCity}</span>
-              <span className="text-teal-300 text-[13px]">→</span>
+              <ArrowRight className="w-4 h-4 text-teal-300 shrink-0" />
               <span className="truncate">{destinationCity}</span>
             </div>
             <p className="text-teal-300/80 text-[12px] mt-0.5 font-medium">
@@ -139,6 +150,8 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
               trip={trip}
               index={i}
               passengers={passengers}
+              originCity={originCity}
+              destCity={destinationCity}
               onSelect={() => selectTrip(trip)}
             />
           ))}
@@ -164,6 +177,19 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
   );
 }
 
+function getRawStops(trip: TripSearchResult): Array<{ name: string; code: string; city: string; departAt: string | null; arriveAt: string | null; sequence: number }> {
+  const raw = (trip as unknown as { raw?: { stops?: Array<{ name: string; code: string; city: string; departAt: string | null; arriveAt: string | null; sequence: number }> } }).raw;
+  return raw?.stops || [];
+}
+
+function getRawTimes(trip: TripSearchResult): { departAt: string | null; arriveAt: string | null } {
+  const raw = (trip as unknown as { raw?: { origin?: { departAt: string | null }; destination?: { arriveAt: string | null } } }).raw;
+  return {
+    departAt: raw?.origin?.departAt || trip.origin?.departureTime || null,
+    arriveAt: raw?.destination?.arriveAt || trip.destination?.departureTime || null,
+  };
+}
+
 function getDurationLabel(departureTime?: string | null, arrivalTime?: string | null): string {
   if (!departureTime || !arrivalTime) return '';
   const d1 = new Date(departureTime).getTime();
@@ -172,132 +198,139 @@ function getDurationLabel(departureTime?: string | null, arrivalTime?: string | 
   const diff = Math.abs(d2 - d1);
   const h = Math.floor(diff / 3600000);
   const m = Math.round((diff % 3600000) / 60000);
-  if (h === 0) return `${m}m`;
-  if (m === 0) return `${h}j`;
+  if (h === 0) return `${m} mnt`;
+  if (m === 0) return `${h} jam`;
   return `${h}j ${m}m`;
 }
 
-function TripCard({ trip, index, passengers, onSelect }: {
-  trip: TripSearchResult; index: number; passengers: number; onSelect: () => void;
+function TripCard({ trip, index, passengers, originCity, destCity, onSelect }: {
+  trip: TripSearchResult; index: number; passengers: number; originCity: string; destCity: string; onSelect: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const duration = getDurationLabel(trip.origin?.departureTime, trip.destination?.departureTime);
+  const rawTimes = getRawTimes(trip);
+  const departTime = fmtTime(rawTimes.departAt);
+  const arriveTime = fmtTime(rawTimes.arriveAt);
+  const duration = getDurationLabel(rawTimes.departAt, rawTimes.arriveAt);
   const isFull = trip.availableSeats < passengers;
+  const stops = getRawStops(trip);
+  const svcLabel = vehicleLabel(trip.vehicleClass);
+  const originLabel = trip.origin?.stopName || originCity;
+  const destLabel = trip.destination?.stopName || destCity;
 
   return (
     <div
-      className={cn('bg-white rounded-2xl overflow-hidden anim-slide-up border border-slate-100', `delay-${Math.min(index + 1, 4)}`)}
-      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03)' }}
+      className={cn('bg-white rounded-2xl overflow-hidden anim-slide-up', `delay-${Math.min(index + 1, 4)}`)}
+      style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05), 0 6px 20px rgba(0,0,0,0.04)' }}
       data-testid={`card-trip-${trip.tripId}`}
     >
-      <div className="p-4 pb-3">
-        <div className="flex items-center gap-2 mb-3">
-          {trip.operatorLogo ? (
-            <img
-              src={trip.operatorLogo}
-              alt={trip.operatorName}
-              className="w-7 h-7 rounded-lg object-contain bg-slate-50 border border-slate-100"
-            />
-          ) : (
+      <div className="p-4">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2.5">
             <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-              style={{ backgroundColor: trip.operatorColor ? `${trip.operatorColor}20` : undefined }}
+              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+              style={{ backgroundColor: trip.operatorColor ? `${trip.operatorColor}15` : '#f0fdfa' }}
             >
-              <Building2
-                className="w-3.5 h-3.5"
-                style={{ color: trip.operatorColor || '#0d9488' }}
-              />
+              {trip.operatorLogo ? (
+                <img src={trip.operatorLogo} alt={trip.operatorName} className="w-5 h-5 object-contain" />
+              ) : (
+                <Bus className="w-4.5 h-4.5" style={{ color: trip.operatorColor || '#0d9488' }} />
+              )}
             </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-[13px] text-slate-700 truncate leading-tight">{trip.operatorName}</p>
-            {trip.vehicleClass && (
-              <p className="text-[10px] text-slate-400 font-medium mt-0.5">{trip.vehicleClass}</p>
-            )}
+            <div>
+              <p className="font-bold text-[14px] text-slate-800 leading-tight">{trip.operatorName}</p>
+              {svcLabel && (
+                <span className="inline-flex items-center mt-0.5 text-[10px] font-semibold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-md">
+                  {svcLabel}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex flex-col items-end shrink-0 gap-0.5">
-            <div className="text-right">
-              <p className="font-extrabold text-[18px] text-teal-700 font-display leading-none">{fmtCurrency(trip.farePerPerson)}</p>
-              <p className="text-[10px] text-slate-400 font-medium">/orang</p>
-            </div>
-            {trip.isVirtual && (
-              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md">
-                <Zap className="w-2.5 h-2.5" />
-                Virtual
-              </span>
-            )}
+          <div className="text-right shrink-0">
+            <p className="font-extrabold text-[20px] text-teal-700 font-display leading-none">{fmtCurrency(trip.farePerPerson)}</p>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">/orang</p>
           </div>
         </div>
 
-        <div className="flex items-stretch gap-3">
-          <div className="flex flex-col items-center shrink-0 w-[52px]">
-            <p className="font-bold text-[22px] text-slate-900 leading-none font-display">{fmtTime(trip.origin?.departureTime)}</p>
-            <div className="flex-1 flex flex-col items-center py-1.5">
-              <div className="w-[9px] h-[9px] rounded-full border-[2.5px] border-teal-500 bg-white" />
-              <div className="flex-1 w-[2px] bg-gradient-to-b from-teal-400 to-coral-400 rounded-full my-0.5" style={{ minHeight: 24 }} />
-              <div className="w-[9px] h-[9px] rounded-full bg-coral-500" />
+        <div className="flex items-center gap-3 bg-slate-50/80 rounded-xl p-3">
+          <div className="flex flex-col items-center shrink-0 gap-0.5">
+            <p className="font-bold text-[18px] text-slate-900 font-display leading-none">{departTime}</p>
+            <div className="flex flex-col items-center py-1">
+              <div className="w-2 h-2 rounded-full border-2 border-teal-500 bg-white" />
+              <div className="w-[2px] flex-1 bg-gradient-to-b from-teal-400 to-coral-400 rounded-full" style={{ minHeight: 20 }} />
+              <div className="w-2 h-2 rounded-full bg-coral-500" />
             </div>
-            <p className="font-bold text-[22px] text-slate-900 leading-none font-display">{fmtTime(trip.destination?.departureTime)}</p>
+            <p className="font-bold text-[18px] text-slate-900 font-display leading-none">{arriveTime}</p>
           </div>
 
-          <div className="flex-1 flex flex-col justify-between min-w-0 py-0.5">
+          <div className="flex-1 flex flex-col justify-between min-w-0 gap-1">
             <div>
-              <p className="font-semibold text-[13px] text-slate-800 truncate">{trip.origin?.stopName}</p>
-              <p className="text-[10px] text-slate-400 mt-0.5">{trip.origin?.cityName}</p>
+              <p className="font-semibold text-[13px] text-slate-800 truncate">{originLabel}</p>
+              <p className="text-[10px] text-slate-400">{originCity}</p>
             </div>
 
-            <div className="flex items-center gap-2 my-1">
-              {duration && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400 bg-slate-50 rounded-md px-2 py-0.5">
+            {duration && (
+              <div className="flex items-center gap-1.5 my-0.5">
+                <div className="h-[1px] flex-1 bg-slate-200" />
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400 shrink-0">
                   <Clock className="w-3 h-3" />
                   {duration}
                 </span>
-              )}
-              {trip.isVirtual && (
-                <button
-                  onClick={() => setExpanded(!expanded)}
-                  className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-600 bg-amber-50/60 rounded-md px-2 py-0.5 hover:bg-amber-50 transition-colors"
-                  data-testid={`button-expand-stops-${trip.tripId}`}
-                >
-                  <MapPin className="w-3 h-3" />
-                  Rute dinamis
-                  {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                </button>
-              )}
-            </div>
+                <div className="h-[1px] flex-1 bg-slate-200" />
+              </div>
+            )}
 
             <div>
-              <p className="font-semibold text-[13px] text-slate-800 truncate">{trip.destination?.stopName}</p>
-              <p className="text-[10px] text-slate-400 mt-0.5">{trip.destination?.cityName}</p>
+              <p className="font-semibold text-[13px] text-slate-800 truncate">{destLabel}</p>
+              <p className="text-[10px] text-slate-400">{destCity}</p>
             </div>
           </div>
         </div>
+
+        {stops.length > 2 && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center gap-1 mt-2 text-[11px] font-semibold text-teal-600 hover:text-teal-700 transition-colors"
+            data-testid={`button-expand-stops-${trip.tripId}`}
+          >
+            <MapPin className="w-3 h-3" />
+            {expanded ? 'Sembunyikan rute' : `Lihat ${stops.length} pemberhentian`}
+            {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+        )}
+
+        {expanded && stops.length > 0 && (
+          <div className="mt-2 ml-1 pl-3 border-l-2 border-teal-100 space-y-2 py-1">
+            {stops.map((stop, i) => (
+              <div key={stop.code} className="flex items-center gap-2 text-[11px]">
+                <div className={cn(
+                  'w-1.5 h-1.5 rounded-full shrink-0 -ml-[13px]',
+                  i === 0 ? 'bg-teal-500' : i === stops.length - 1 ? 'bg-coral-500' : 'bg-slate-300'
+                )} />
+                <span className="font-medium text-slate-600">{fmtTime(stop.departAt || stop.arriveAt)}</span>
+                <span className="text-slate-800 font-medium truncate">{stop.name}</span>
+                <span className="text-slate-400 shrink-0">{stop.city}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {expanded && (
-        <div className="px-4 pb-3">
-          <div className="bg-amber-50 rounded-xl p-3 text-[12px] text-amber-700 font-medium">
-            Rute virtual — titik naik & turun akan dikonfirmasi dengan operator.
-          </div>
-        </div>
-      )}
-
-      <div className="flex items-center justify-between px-4 py-3 bg-slate-50/70 border-t border-slate-100/80">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
         <div className="flex items-center gap-1.5 text-[11px] font-medium">
           <Users className="w-3.5 h-3.5 text-slate-400" />
           <span className={cn(
-            isFull ? 'text-red-500' : trip.availableSeats <= 5 ? 'text-amber-600' : 'text-slate-400'
+            isFull ? 'text-red-500' : trip.availableSeats <= 5 ? 'text-amber-600' : 'text-slate-500'
           )}>
-            {isFull ? 'Penuh' : `${trip.availableSeats} kursi tersedia`}
+            {isFull ? 'Kursi penuh' : `${trip.availableSeats} kursi tersedia`}
           </span>
         </div>
         <Button
           size="sm"
           className={cn(
-            "h-9 px-6 rounded-xl text-[13px] font-bold shadow-sm transition-all",
+            "h-10 px-7 rounded-xl text-[13px] font-bold transition-all",
             isFull
               ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-              : "bg-teal-700 hover:bg-teal-800 active:scale-[0.97] text-white"
+              : "bg-teal-700 hover:bg-teal-800 active:scale-[0.97] text-white shadow-md shadow-teal-700/20"
           )}
           onClick={onSelect}
           disabled={isFull}
