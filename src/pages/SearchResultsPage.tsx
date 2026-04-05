@@ -5,7 +5,8 @@ import { tripsApi, type TripSearchResult } from '@/lib/api';
 import { fmtCurrency, fmtTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import OperatorLogo from '@/components/OperatorLogo';
-import { ArrowLeft, Loader2, SearchX, Clock, MapPin, ChevronDown, ChevronUp, Users, CheckCircle2, ArrowRight } from 'lucide-react';
+import OperatorBottomSheet from '@/components/OperatorBottomSheet';
+import { ArrowLeft, Loader2, SearchX, Clock, MapPin, ChevronDown, ChevronUp, Users, CheckCircle2, ArrowRight, SlidersHorizontal, Bus } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -35,6 +36,7 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
   const { navigate, goBack } = useNav();
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(operatorFilter ?? null);
+  const [operatorSheetOpen, setOperatorSheetOpen] = useState(false);
 
   const {
     data,
@@ -121,34 +123,43 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
       </div>
 
       <div className="px-4 pt-4 pb-8">
-        {!isLoading && operators.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 pb-3 mb-1">
+        {!isLoading && allTrips.length > 0 && (
+          <div className="flex items-center gap-2 mb-3">
             <button
-              onClick={() => setActiveFilter(null)}
+              onClick={() => setOperatorSheetOpen(true)}
               className={cn(
-                'shrink-0 flex items-center gap-1.5 h-9 px-3.5 rounded-xl border text-[12px] font-semibold transition-all active:scale-[0.97]',
-                activeFilter === null
-                  ? 'bg-teal-900 border-teal-900 text-white shadow-sm'
+                'flex items-center gap-2 h-9 px-3 pr-3.5 rounded-xl border text-[12px] font-semibold transition-all active:scale-[0.97]',
+                activeFilter
+                  ? 'border-teal-600 bg-teal-50 text-teal-800 shadow-sm'
                   : 'bg-white border-slate-200 text-slate-500 hover:border-teal-300'
               )}
             >
-              Semua
+              {activeFilter ? (
+                <>
+                  <OperatorLogo
+                    name={operators.find(o => o.slug === activeFilter)?.name || activeFilter}
+                    logo={operators.find(o => o.slug === activeFilter)?.logo || null}
+                    color={operators.find(o => o.slug === activeFilter)?.color || '#134E4A'}
+                    size="sm"
+                    className="!w-6 !h-6 !rounded-md"
+                  />
+                  {operators.find(o => o.slug === activeFilter)?.name || activeFilter}
+                </>
+              ) : (
+                <>
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  Semua Operator
+                </>
+              )}
             </button>
-            {operators.map((op) => (
+            {activeFilter && (
               <button
-                key={op.slug}
-                onClick={() => setActiveFilter(activeFilter === op.slug ? null : op.slug)}
-                className={cn(
-                  'shrink-0 flex items-center gap-1.5 h-9 px-3 pr-3.5 rounded-xl border text-[12px] font-semibold transition-all active:scale-[0.97]',
-                  activeFilter === op.slug
-                    ? 'border-teal-600 bg-teal-50 text-teal-800 shadow-sm'
-                    : 'bg-white border-slate-200 text-slate-500 hover:border-teal-300'
-                )}
+                onClick={() => setActiveFilter(null)}
+                className="h-9 px-3 rounded-xl border border-slate-200 bg-white text-[12px] font-semibold text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all active:scale-[0.97]"
               >
-                <OperatorLogo name={op.name} logo={op.logo} color={op.color} size="sm" className="!w-6 !h-6 !rounded-md" />
-                {op.name}
+                Reset
               </button>
-            ))}
+            )}
           </div>
         )}
 
@@ -224,6 +235,14 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
           </div>
         )}
       </div>
+
+      <OperatorBottomSheet
+        open={operatorSheetOpen}
+        operators={operators.map(o => ({ slug: o.slug, name: o.name, color: o.color, logo: o.logo }))}
+        selected={activeFilter}
+        onSelect={setActiveFilter}
+        onClose={() => setOperatorSheetOpen(false)}
+      />
     </div>
   );
 }
