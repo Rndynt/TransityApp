@@ -3,7 +3,7 @@ import { useAuth, useNav } from '@/App';
 import { authApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Loader2, LogOut, UserCircle2, Mail, Lock, Phone, User } from 'lucide-react';
+import { Loader2, Mail, Lock, Phone, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type Page = Parameters<ReturnType<typeof useNav>['navigate']>[0];
@@ -13,7 +13,7 @@ interface Props {
 }
 
 export default function AuthPage({ returnTo }: Props) {
-  const { user, isLoggedIn, login, logout } = useAuth();
+  const { isLoggedIn, login } = useAuth();
   const { navigate } = useNav();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
@@ -23,32 +23,8 @@ export default function AuthPage({ returnTo }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  if (isLoggedIn && user) {
-    return (
-      <div className="anim-fade px-4 pt-14 pb-28">
-        <div className="bg-white rounded-2xl shadow-soft overflow-hidden">
-          <div className="bg-gradient-to-br from-teal-800 to-teal-900 p-6">
-            <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center mb-3">
-              <UserCircle2 className="w-8 h-8 text-white" />
-            </div>
-            <p className="font-bold text-[18px] text-white">{user.name}</p>
-            <p className="text-teal-200 text-[13px] mt-0.5">{user.email}</p>
-            {user.phone && <p className="text-teal-300 text-[13px]">{user.phone}</p>}
-          </div>
-          <div className="p-4">
-            <Button
-              variant="outline"
-              className="w-full h-12 rounded-2xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 font-bold text-[13px]"
-              onClick={() => { logout(); navigate({ name: 'home' }); }}
-              data-testid="button-logout"
-            >
-              <LogOut className="w-4 h-4" />
-              Keluar dari Akun
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+  if (isLoggedIn) {
+    return null;
   }
 
   const submit = async () => {
@@ -64,7 +40,7 @@ export default function AuthPage({ returnTo }: Props) {
         login(res.user, res.token);
       }
       if (returnTo) navigate(returnTo);
-      else navigate({ name: 'home' });
+      else navigate({ name: 'profile' });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Terjadi kesalahan');
     } finally {

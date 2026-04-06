@@ -58,10 +58,21 @@ Semua API request diarahkan ke Console. Tidak ada koneksi langsung ke Terminal.
 5. SelectSeatsPage → pilih kursi dari seatmap
 6. BookingConfirmPage → konfirmasi & bayar
 
+### Halaman Tambahan
+- **ProfilePage** — Profil user (info akun, menu navigasi ke help/notif/about, logout dengan konfirmasi)
+- **HelpPage** — FAQ accordion dengan search, 10 pertanyaan dalam 4 kategori, tombol hubungi kami
+- **NotificationsPage** — Daftar notifikasi (saat ini static/placeholder)
+- **AboutPage** — Info versi app, link privacy/terms/contact/website
+
 ### Komponen Penting
 - `OperatorBottomSheet` — filter operator (reusable, searchable)
 - `OperatorLogo` — logo operator dengan fallback initial+color
 - `CityBottomSheet` — pilih kota (tanpa auto-focus keyboard)
+
+### Navigasi
+- Tab "Akun" → ProfilePage (jika login) atau AuthPage (jika belum login)
+- AuthPage redirect ke ProfilePage jika sudah login
+- ProfilePage punya menu ke Notifikasi, Bantuan, dan Tentang Aplikasi
 
 ## Endpoint Gateway
 

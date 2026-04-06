@@ -8,6 +8,10 @@ import BookingConfirmPage from '@/pages/BookingConfirmPage';
 import BookingDetailPage from '@/pages/BookingDetailPage';
 import MyTripsPage from '@/pages/MyTripsPage';
 import AuthPage from '@/pages/AuthPage';
+import ProfilePage from '@/pages/ProfilePage';
+import HelpPage from '@/pages/HelpPage';
+import NotificationsPage from '@/pages/NotificationsPage';
+import AboutPage from '@/pages/AboutPage';
 import OnboardingPage, { hasSeenOnboarding } from '@/pages/OnboardingPage';
 import { Home, Ticket, UserCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -20,7 +24,11 @@ type Page =
   | { name: 'booking-confirm'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; seats: string[]; tripLabel: string; fare: number }
   | { name: 'booking-detail'; bookingId: string; source?: 'gateway' | 'terminal' }
   | { name: 'my-trips' }
-  | { name: 'auth'; returnTo?: Page };
+  | { name: 'auth'; returnTo?: Page }
+  | { name: 'profile' }
+  | { name: 'help' }
+  | { name: 'notifications' }
+  | { name: 'about' };
 
 interface AuthCtx {
   user: AppUser | null;
@@ -104,6 +112,10 @@ function PageRouter() {
     case 'booking-detail': return <BookingDetailPage bookingId={page.bookingId} source={page.source} />;
     case 'my-trips': return <MyTripsPage />;
     case 'auth': return <AuthPage returnTo={page.returnTo} />;
+    case 'profile': return <ProfilePage />;
+    case 'help': return <HelpPage />;
+    case 'notifications': return <NotificationsPage />;
+    case 'about': return <AboutPage />;
     default: return <HomePage />;
   }
 }
@@ -118,7 +130,7 @@ function BottomNav() {
   const tabs = [
     { key: 'home' as const, label: 'Beranda', icon: Home },
     { key: 'my-trips' as const, label: 'Pesanan', icon: Ticket },
-    { key: 'auth' as const, label: isLoggedIn ? 'Akun' : 'Masuk', icon: UserCircle2 },
+    { key: 'profile' as const, label: isLoggedIn ? 'Akun' : 'Masuk', icon: UserCircle2 },
   ];
 
   return (
@@ -127,8 +139,8 @@ function BottomNav() {
         {tabs.map((tab) => {
           const active =
             (tab.key === 'home' && page.name === 'home') ||
-            (tab.key === 'my-trips' && page.name === 'my-trips') ||
-            (tab.key === 'auth' && page.name === 'auth');
+            (tab.key === 'my-trips' && ['my-trips', 'booking-detail'].includes(page.name)) ||
+            (tab.key === 'profile' && ['profile', 'auth', 'help', 'notifications', 'about'].includes(page.name));
           const Icon = tab.icon;
           return (
             <button
@@ -136,6 +148,8 @@ function BottomNav() {
               onClick={() => {
                 if (tab.key === 'my-trips' && !isLoggedIn) {
                   navigate({ name: 'auth', returnTo: { name: 'my-trips' } });
+                } else if (tab.key === 'profile') {
+                  navigate(isLoggedIn ? { name: 'profile' } : { name: 'auth' });
                 } else {
                   navigate({ name: tab.key });
                 }
