@@ -87,9 +87,9 @@ async function start() {
   }
 
   await app.listen({ port: PORT, host: '0.0.0.0' });
+  const activeUpstream = CONSOLE_URL || API_UPSTREAM;
   console.log(`[transityweb] running on port ${PORT} (${isProd ? 'production' : 'development'})`);
-  console.log(`[transityweb] API upstream (app): ${API_UPSTREAM}`);
-  console.log(`[transityweb] Console URL (gateway): ${CONSOLE_URL || '(fallback to API_UPSTREAM)'}`);
+  console.log(`[transityweb] API upstream: ${activeUpstream}`);;
 }
 
 start().catch((err) => {
