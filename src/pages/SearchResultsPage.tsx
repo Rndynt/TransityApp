@@ -294,61 +294,70 @@ function TripCard({ trip, index, passengers, originCity, destCity, onSelect }: {
       data-testid={`card-trip-${trip.tripId}`}
     >
       <div className="p-4">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2.5">
-            <OperatorLogo
-              name={trip.operatorName}
-              logo={trip.operatorLogo}
-              color={trip.operatorColor || '#134E4A'}
-              size="md"
-            />
+        <div className="flex items-stretch gap-3">
+          <div className="flex flex-col items-center shrink-0 pt-0.5">
+            <p className="font-bold text-[20px] text-slate-900 font-display leading-none">{departTime}</p>
+            <div className="flex flex-col items-center py-1.5 flex-1">
+              <div className="w-2 h-2 rounded-full border-2 border-teal-500 bg-white" />
+              <div className="w-[2px] flex-1 bg-gradient-to-b from-teal-400 to-coral-400 rounded-full" style={{ minHeight: 24 }} />
+              <div className="w-2 h-2 rounded-full bg-coral-500" />
+            </div>
+            <p className="font-bold text-[20px] text-slate-900 font-display leading-none">{arriveTime}</p>
+          </div>
+
+          <div className="flex-1 flex flex-col justify-between min-w-0 py-0.5">
             <div>
-              <p className="font-bold text-[14px] text-slate-800 leading-tight">{trip.operatorName}</p>
+              <p className="font-semibold text-[14px] text-slate-800 truncate leading-tight">{originLabel}</p>
+              <p className="text-[11px] text-slate-400">{originCity}</p>
+            </div>
+
+            {duration && (
+              <div className="flex items-center gap-1.5 my-1">
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400">
+                  <Clock className="w-3 h-3" />
+                  {duration}
+                </span>
+              </div>
+            )}
+
+            <div>
+              <p className="font-semibold text-[14px] text-slate-800 truncate leading-tight">{destLabel}</p>
+              <p className="text-[11px] text-slate-400">{destCity}</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-end justify-between shrink-0 py-0.5">
+            <div className="text-right">
+              <p className="font-extrabold text-[18px] text-teal-700 font-display leading-none">{fmtCurrency(trip.farePerPerson)}</p>
+              <p className="text-[10px] text-slate-400 font-medium mt-0.5">/orang</p>
+            </div>
+            <div className="flex items-center gap-1.5 mt-auto">
               {svcLabel && (
-                <span className="inline-flex items-center mt-0.5 text-[10px] font-semibold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-md">
+                <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-md">
                   {svcLabel}
                 </span>
               )}
             </div>
           </div>
-          <div className="text-right shrink-0">
-            <p className="font-extrabold text-[20px] text-teal-700 font-display leading-none">{fmtCurrency(trip.farePerPerson)}</p>
-            <p className="text-[10px] text-slate-400 font-medium mt-0.5">/orang</p>
-          </div>
         </div>
 
-        <div className="flex items-center gap-3 bg-slate-50/80 rounded-xl p-3">
-          <div className="flex flex-col items-center shrink-0 gap-0.5">
-            <p className="font-bold text-[18px] text-slate-900 font-display leading-none">{departTime}</p>
-            <div className="flex flex-col items-center py-1">
-              <div className="w-2 h-2 rounded-full border-2 border-teal-500 bg-white" />
-              <div className="w-[2px] flex-1 bg-gradient-to-b from-teal-400 to-coral-400 rounded-full" style={{ minHeight: 20 }} />
-              <div className="w-2 h-2 rounded-full bg-coral-500" />
-            </div>
-            <p className="font-bold text-[18px] text-slate-900 font-display leading-none">{arriveTime}</p>
-          </div>
+        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100/80">
+          <OperatorLogo
+            name={trip.operatorName}
+            logo={trip.operatorLogo}
+            color={trip.operatorColor || '#134E4A'}
+            size="sm"
+            className="!w-6 !h-6 !rounded-md"
+          />
+          <span className="text-[11px] font-medium text-slate-500">{trip.operatorName}</span>
 
-          <div className="flex-1 flex flex-col justify-between min-w-0 gap-1">
-            <div>
-              <p className="font-semibold text-[13px] text-slate-800 truncate">{originLabel}</p>
-              <p className="text-[10px] text-slate-400">{originCity}</p>
-            </div>
-
-            {duration && (
-              <div className="flex items-center gap-1.5 my-0.5">
-                <div className="h-[1px] flex-1 bg-slate-200" />
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400 shrink-0">
-                  <Clock className="w-3 h-3" />
-                  {duration}
-                </span>
-                <div className="h-[1px] flex-1 bg-slate-200" />
-              </div>
-            )}
-
-            <div>
-              <p className="font-semibold text-[13px] text-slate-800 truncate">{destLabel}</p>
-              <p className="text-[10px] text-slate-400">{destCity}</p>
-            </div>
+          <div className="ml-auto flex items-center gap-1.5 text-[11px] font-medium">
+            <Users className="w-3.5 h-3.5 text-slate-400" />
+            <span className={cn(
+              isFull ? 'text-red-500' : trip.availableSeats <= 5 ? 'text-amber-600' : 'text-slate-500'
+            )}>
+              {isFull ? 'Penuh' : `${trip.availableSeats} kursi`}
+            </span>
           </div>
         </div>
 
@@ -381,19 +390,11 @@ function TripCard({ trip, index, passengers, originCity, destCity, onSelect }: {
         )}
       </div>
 
-      <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-        <div className="flex items-center gap-1.5 text-[11px] font-medium">
-          <Users className="w-3.5 h-3.5 text-slate-400" />
-          <span className={cn(
-            isFull ? 'text-red-500' : trip.availableSeats <= 5 ? 'text-amber-600' : 'text-slate-500'
-          )}>
-            {isFull ? 'Kursi penuh' : `${trip.availableSeats} kursi tersedia`}
-          </span>
-        </div>
+      <div className="px-4 py-3 border-t border-slate-100">
         <Button
           size="sm"
           className={cn(
-            "h-10 px-7 rounded-xl text-[13px] font-bold transition-all",
+            "w-full h-11 rounded-xl text-[13px] font-bold transition-all",
             isFull
               ? "bg-slate-200 text-slate-400 cursor-not-allowed"
               : "bg-teal-700 hover:bg-teal-800 active:scale-[0.97] text-white shadow-md shadow-teal-700/20"
@@ -402,7 +403,7 @@ function TripCard({ trip, index, passengers, originCity, destCity, onSelect }: {
           disabled={isFull}
           data-testid={`button-select-trip-${trip.tripId}`}
         >
-          {isFull ? 'Penuh' : 'Pilih'}
+          {isFull ? 'Kursi Penuh' : 'Pilih'}
         </Button>
       </div>
     </div>
