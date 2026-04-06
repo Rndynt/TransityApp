@@ -314,6 +314,11 @@ export const tripsApi = {
   getDetail: (tripId: string) => api.get<TripDetail>(`/api/gateway/trips/${tripId}`),
   getSeatmap: (tripId: string, originSeq: number, destSeq: number) =>
     api.get<SeatmapResponse>(`/api/gateway/trips/${tripId}/seatmap?originSeq=${originSeq}&destinationSeq=${destSeq}`),
+  materialize: async (tripId: string, serviceDate: string): Promise<{ tripId: string }> => {
+    const rawId = tripId.includes(':') ? tripId.split(':').slice(1).join(':') : tripId;
+    const baseId = rawId.replace(/^virtual-/, '');
+    return api.post<{ tripId: string }>('/api/gateway/trips/materialize', { baseId, serviceDate } as unknown as Record<string, unknown>);
+  },
 };
 
 export const bookingsApi = {

@@ -80,6 +80,16 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
 
   const selectTrip = (trip: TripSearchResult) => {
     const tripLabel = `${trip.operatorName} · ${trip.origin?.cityName || originCity} → ${trip.destination?.cityName || destinationCity}`;
+    const rawStops = getRawStops(trip);
+    const stopsForNav: import('@/lib/api').TripStopInfo[] = rawStops.map(s => ({
+      stopId: (s as unknown as { stopId?: string }).stopId || s.code,
+      name: s.name,
+      code: s.code,
+      city: s.city,
+      sequence: s.sequence,
+      arriveAt: s.arriveAt,
+      departAt: s.departAt,
+    }));
     navigate({
       name: 'select-stops',
       tripId: trip.tripId,
@@ -87,7 +97,7 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
       passengers,
       tripLabel,
       fare: trip.farePerPerson,
-      stops: [],
+      stops: stopsForNav,
       originCity,
       destCity: destinationCity,
       originSeq: trip.origin?.sequence || 0,

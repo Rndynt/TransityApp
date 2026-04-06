@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useNav } from '@/App';
 import { tripsApi, type TripStopInfo } from '@/lib/api';
 import { fmtTime } from '@/lib/utils';
@@ -62,20 +62,48 @@ export default function SelectStopsPage({ tripId, serviceDate, passengers, tripL
     setDropStopId(stop.stopId);
   };
 
+  const isVirtual = tripId.includes('virtual-');
+
+  const materializeMut = useMutation({
+    mutationFn: () => tripsApi.materialize(tripId, serviceDate),
+    onSuccess: (result) => {
+      if (!pickupStop || !dropStop) return;
+      const realTripId = result.tripId.includes(':')
+        ? result.tripId
+        : `${tripId.split(':')[0] || ''}:${result.tripId}`.replace(/^:/, '');
+      navigate({
+        name: 'select-seats',
+        tripId: realTripId,
+        serviceDate,
+        originStopId: pickupStop.stopId,
+        destStopId: dropStop.stopId,
+        originSeq: pickupStop.sequence,
+        destSeq: dropStop.sequence,
+        passengers,
+        tripLabel,
+        fare,
+      });
+    },
+  });
+
   const proceed = () => {
     if (!pickupStop || !dropStop) return;
-    navigate({
-      name: 'select-seats',
-      tripId,
-      serviceDate,
-      originStopId: pickupStop.stopId,
-      destStopId: dropStop.stopId,
-      originSeq: pickupStop.sequence,
-      destSeq: dropStop.sequence,
-      passengers,
-      tripLabel,
-      fare,
-    });
+    if (isVirtual) {
+      materializeMut.mutate();
+    } else {
+      navigate({
+        name: 'select-seats',
+        tripId,
+        serviceDate,
+        originStopId: pickupStop.stopId,
+        destStopId: dropStop.stopId,
+        originSeq: pickupStop.sequence,
+        destSeq: dropStop.sequence,
+        passengers,
+        tripLabel,
+        fare,
+      });
+    }
   };
 
   const activeStops = mode === 'pickup' ? pickupStops : dropStops;
@@ -252,13 +280,18 @@ export default function SelectStopsPage({ tripId, serviceDate, passengers, tripL
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 safe-bottom z-40">
         <div className="px-4 py-3">
+          {materializeMut.isError && (
+            <p className="text-red-500 text-xs text-center mb-2">Gagal memproses jadwal. Silakan coba lagi.</p>
+          )}
           <Button
             className="w-full h-12 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[14px] font-bold shadow-lg shadow-teal-900/15 transition-all active:scale-[0.97]"
-            disabled={!canProceed}
+            disabled={!canProceed || materializeMut.isPending}
             onClick={proceed}
             data-testid="button-continue-stops"
           >
-            {!canProceed
+            {materializeMut.isPending ? (
+              <><Loader2 className="w-4 h-4 animate-spin mr-2" />Memproses jadwal...</>
+            ) : !canProceed
               ? (pickupStopId === null ? 'Pilih titik naik dulu' : 'Pilih titik turun')
               : 'Lanjut Pilih Kursi'
             }
