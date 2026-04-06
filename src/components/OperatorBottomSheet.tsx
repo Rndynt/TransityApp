@@ -52,8 +52,8 @@ export default function OperatorBottomSheet({ open, operators, selected, onSelec
       />
       <div
         className={cn(
-          'fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-[1.5rem] transition-transform duration-300 ease-out',
-          'max-h-[75vh] flex flex-col',
+          'fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-[1.5rem] transition-transform duration-300 ease-out shadow-[0_-4px_30px_rgba(0,0,0,0.12)]',
+          'max-h-[85vh] flex flex-col pb-20',
           open ? 'translate-y-0' : 'translate-y-full',
         )}
       >

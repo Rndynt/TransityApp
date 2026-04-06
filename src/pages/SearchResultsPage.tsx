@@ -290,112 +290,103 @@ function TripCard({ trip, index, passengers, originCity, destCity, onSelect }: {
   return (
     <button
       className={cn(
-        'w-full text-left bg-white rounded-2xl overflow-hidden anim-slide-up transition-all',
-        isFull ? 'opacity-60' : 'hover:shadow-lg active:scale-[0.98]',
+        'w-full text-left bg-white rounded-2xl overflow-hidden anim-slide-up transition-all border border-slate-100',
+        isFull ? 'opacity-50' : 'hover:border-teal-200 hover:shadow-lg active:scale-[0.98]',
         `delay-${Math.min(index + 1, 4)}`
       )}
-      style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05), 0 6px 20px rgba(0,0,0,0.04)' }}
+      style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.04)' }}
       onClick={isFull ? undefined : onSelect}
       disabled={isFull}
       data-testid={`card-trip-${trip.tripId}`}
     >
-      <div className="p-4">
-        <div className="flex items-stretch gap-3">
-          <div className="flex flex-col items-center shrink-0 pt-0.5">
-            <p className="font-bold text-[20px] text-slate-900 font-display leading-none">{departTime}</p>
-            <div className="flex flex-col items-center py-1.5 flex-1">
-              <div className="w-2 h-2 rounded-full border-2 border-teal-500 bg-white" />
-              <div className="w-[2px] flex-1 bg-gradient-to-b from-teal-400 to-coral-400 rounded-full" style={{ minHeight: 24 }} />
+      <div className="p-4 pb-3">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="text-center shrink-0 w-[52px]">
+              <p className="font-extrabold text-[22px] text-slate-900 font-display leading-none tracking-tight">{departTime}</p>
+            </div>
+            <div className="flex items-center gap-1.5 text-slate-300">
+              <div className="w-2 h-2 rounded-full border-2 border-teal-500" />
+              <div className="w-8 h-[2px] bg-gradient-to-r from-teal-400 to-coral-400 rounded-full" />
               <div className="w-2 h-2 rounded-full bg-coral-500" />
             </div>
-            <p className="font-bold text-[20px] text-slate-900 font-display leading-none">{arriveTime}</p>
-          </div>
-
-          <div className="flex-1 flex flex-col justify-between min-w-0 py-0.5">
-            <div>
-              <p className="font-semibold text-[14px] text-slate-800 truncate leading-tight">{originLabel}</p>
-              <p className="text-[11px] text-slate-400">{originCity}</p>
+            <div className="text-center shrink-0 w-[52px]">
+              <p className="font-extrabold text-[22px] text-slate-900 font-display leading-none tracking-tight">{arriveTime}</p>
             </div>
-
             {duration && (
-              <div className="flex items-center gap-1.5 my-1">
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400">
-                  <Clock className="w-3 h-3" />
-                  {duration}
-                </span>
-              </div>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">
+                <Clock className="w-3 h-3" />
+                {duration}
+              </span>
             )}
-
-            <div>
-              <p className="font-semibold text-[14px] text-slate-800 truncate leading-tight">{destLabel}</p>
-              <p className="text-[11px] text-slate-400">{destCity}</p>
-            </div>
           </div>
-
-          <div className="flex flex-col items-end justify-between shrink-0 py-0.5">
-            <div className="text-right">
-              <p className="font-extrabold text-[18px] text-teal-700 font-display leading-none">{fmtCurrency(trip.farePerPerson)}</p>
-              <p className="text-[10px] text-slate-400 font-medium mt-0.5">/orang</p>
-            </div>
-            <div className="flex items-center gap-1.5 mt-auto">
-              {svcLabel && (
-                <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-md">
-                  {svcLabel}
-                </span>
-              )}
-            </div>
+          <div className="text-right shrink-0 pl-2">
+            <p className="font-extrabold text-[18px] text-teal-700 font-display leading-none">{fmtCurrency(trip.farePerPerson)}</p>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">/orang</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100/80">
-          <OperatorLogo
-            name={trip.operatorName}
-            logo={trip.operatorLogo}
-            color={trip.operatorColor || '#134E4A'}
-            size="sm"
-            className="!w-6 !h-6 !rounded-md"
-          />
-          <span className="text-[11px] font-medium text-slate-500">{trip.operatorName}</span>
+        <div className="flex items-center gap-2 text-[13px]">
+          <span className="font-semibold text-slate-800 truncate">{originLabel}</span>
+          <ArrowRight className="w-3.5 h-3.5 text-teal-500 shrink-0" />
+          <span className="font-semibold text-slate-800 truncate">{destLabel}</span>
+        </div>
+      </div>
 
-          <div className="ml-auto flex items-center gap-1.5 text-[11px] font-medium">
-            <Users className="w-3.5 h-3.5 text-slate-400" />
-            <span className={cn(
-              isFull ? 'text-red-500' : trip.availableSeats <= 5 ? 'text-amber-600' : 'text-slate-500'
-            )}>
-              {isFull ? 'Penuh' : `${trip.availableSeats} kursi`}
-            </span>
-          </div>
+      <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50/80 border-t border-slate-100/80">
+        <OperatorLogo
+          name={trip.operatorName}
+          logo={trip.operatorLogo}
+          color={trip.operatorColor || '#134E4A'}
+          size="sm"
+          className="!w-5 !h-5 !rounded"
+        />
+        <span className="text-[11px] font-medium text-slate-500">{trip.operatorName}</span>
+        {svcLabel && (
+          <span className="text-[10px] font-semibold text-teal-700 bg-teal-100/60 px-1.5 py-0.5 rounded">
+            {svcLabel}
+          </span>
+        )}
+        <div className="ml-auto flex items-center gap-1 text-[11px] font-medium">
+          <Users className="w-3 h-3 text-slate-400" />
+          <span className={cn(
+            isFull ? 'text-red-500' : trip.availableSeats <= 5 ? 'text-amber-600' : 'text-slate-500'
+          )}>
+            {isFull ? 'Penuh' : `${trip.availableSeats} kursi`}
+          </span>
         </div>
 
         {stops.length > 2 && (
           <div
             role="button"
             onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-            className="flex items-center gap-1 mt-2 text-[11px] font-semibold text-teal-600 hover:text-teal-700 transition-colors"
+            className="flex items-center gap-0.5 text-[11px] font-semibold text-teal-600 hover:text-teal-700 ml-1"
             data-testid={`button-expand-stops-${trip.tripId}`}
           >
             <MapPin className="w-3 h-3" />
-            {expanded ? 'Sembunyikan rute' : `Lihat ${stops.length} pemberhentian`}
+            {stops.length} stop
             {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </div>
         )}
+      </div>
 
-        {expanded && stops.length > 0 && (
-          <div className="mt-2 ml-1 pl-3 border-l-2 border-teal-100 space-y-2 py-1" onClick={(e) => e.stopPropagation()}>
+      {expanded && stops.length > 0 && (
+        <div className="px-4 py-2.5 bg-slate-50/50 border-t border-slate-100/60" onClick={(e) => e.stopPropagation()}>
+          <div className="ml-1 pl-3 border-l-2 border-teal-100 space-y-1.5">
             {stops.map((stop, i) => (
               <div key={stop.code} className="flex items-center gap-2 text-[11px]">
                 <div className={cn(
                   'w-1.5 h-1.5 rounded-full shrink-0 -ml-[13px]',
                   i === 0 ? 'bg-teal-500' : i === stops.length - 1 ? 'bg-coral-500' : 'bg-slate-300'
                 )} />
-                <span className="font-medium text-slate-600">{fmtTime(stop.departAt || stop.arriveAt)}</span>
+                <span className="font-semibold text-slate-600 w-10 shrink-0">{fmtTime(stop.departAt || stop.arriveAt)}</span>
                 <span className="text-slate-800 font-medium truncate">{stop.name}</span>
-                <span className="text-slate-400 shrink-0">{stop.city}</span>
+                <span className="text-slate-400 shrink-0 text-[10px]">{stop.city}</span>
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </button>
   );
 }
