@@ -288,9 +288,15 @@ function TripCard({ trip, index, passengers, originCity, destCity, onSelect }: {
   const destLabel = trip.destination?.stopName || destCity;
 
   return (
-    <div
-      className={cn('bg-white rounded-2xl overflow-hidden anim-slide-up', `delay-${Math.min(index + 1, 4)}`)}
+    <button
+      className={cn(
+        'w-full text-left bg-white rounded-2xl overflow-hidden anim-slide-up transition-all',
+        isFull ? 'opacity-60' : 'hover:shadow-lg active:scale-[0.98]',
+        `delay-${Math.min(index + 1, 4)}`
+      )}
       style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05), 0 6px 20px rgba(0,0,0,0.04)' }}
+      onClick={isFull ? undefined : onSelect}
+      disabled={isFull}
       data-testid={`card-trip-${trip.tripId}`}
     >
       <div className="p-4">
@@ -362,19 +368,20 @@ function TripCard({ trip, index, passengers, originCity, destCity, onSelect }: {
         </div>
 
         {stops.length > 2 && (
-          <button
-            onClick={() => setExpanded(!expanded)}
+          <div
+            role="button"
+            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
             className="flex items-center gap-1 mt-2 text-[11px] font-semibold text-teal-600 hover:text-teal-700 transition-colors"
             data-testid={`button-expand-stops-${trip.tripId}`}
           >
             <MapPin className="w-3 h-3" />
             {expanded ? 'Sembunyikan rute' : `Lihat ${stops.length} pemberhentian`}
             {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
+          </div>
         )}
 
         {expanded && stops.length > 0 && (
-          <div className="mt-2 ml-1 pl-3 border-l-2 border-teal-100 space-y-2 py-1">
+          <div className="mt-2 ml-1 pl-3 border-l-2 border-teal-100 space-y-2 py-1" onClick={(e) => e.stopPropagation()}>
             {stops.map((stop, i) => (
               <div key={stop.code} className="flex items-center gap-2 text-[11px]">
                 <div className={cn(
@@ -389,23 +396,6 @@ function TripCard({ trip, index, passengers, originCity, destCity, onSelect }: {
           </div>
         )}
       </div>
-
-      <div className="px-4 py-3 border-t border-slate-100">
-        <Button
-          size="sm"
-          className={cn(
-            "w-full h-11 rounded-xl text-[13px] font-bold transition-all",
-            isFull
-              ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-              : "bg-teal-700 hover:bg-teal-800 active:scale-[0.97] text-white shadow-md shadow-teal-700/20"
-          )}
-          onClick={onSelect}
-          disabled={isFull}
-          data-testid={`button-select-trip-${trip.tripId}`}
-        >
-          {isFull ? 'Kursi Penuh' : 'Pilih'}
-        </Button>
-      </div>
-    </div>
+    </button>
   );
 }
