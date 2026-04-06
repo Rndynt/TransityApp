@@ -31,6 +31,8 @@ export interface TripStopInfo {
   sequence: number;
   arriveAt: string | null;
   departAt: string | null;
+  boardingAllowed?: boolean;
+  alightingAllowed?: boolean;
 }
 
 export interface GatewayStopInfo {

@@ -82,13 +82,15 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
     const tripLabel = `${trip.operatorName} · ${trip.origin?.cityName || originCity} → ${trip.destination?.cityName || destinationCity}`;
     const rawStops = getRawStops(trip);
     const stopsForNav: import('@/lib/api').TripStopInfo[] = rawStops.map(s => ({
-      stopId: (s as unknown as { stopId?: string }).stopId || s.code,
+      stopId: s.stopId || s.code,
       name: s.name,
       code: s.code,
       city: s.city,
       sequence: s.sequence,
       arriveAt: s.arriveAt,
       departAt: s.departAt,
+      boardingAllowed: s.boardingAllowed,
+      alightingAllowed: s.alightingAllowed,
     }));
     navigate({
       name: 'select-stops',
@@ -257,8 +259,8 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
   );
 }
 
-function getRawStops(trip: TripSearchResult): Array<{ name: string; code: string; city: string; departAt: string | null; arriveAt: string | null; sequence: number }> {
-  const raw = (trip as unknown as { raw?: { stops?: Array<{ name: string; code: string; city: string; departAt: string | null; arriveAt: string | null; sequence: number }> } }).raw;
+function getRawStops(trip: TripSearchResult): Array<{ stopId?: string; name: string; code: string; city: string; departAt: string | null; arriveAt: string | null; sequence: number; boardingAllowed?: boolean; alightingAllowed?: boolean }> {
+  const raw = (trip as unknown as { raw?: { stops?: Array<{ stopId?: string; name: string; code: string; city: string; departAt: string | null; arriveAt: string | null; sequence: number; boardingAllowed?: boolean; alightingAllowed?: boolean }> } }).raw;
   return raw?.stops || [];
 }
 

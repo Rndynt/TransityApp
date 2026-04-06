@@ -46,8 +46,13 @@ export default function SelectStopsPage({ tripId, serviceDate, passengers, tripL
       })) || [])
     : passedStops!;
 
-  const pickupStops = stops.filter(s => s.city ? s.city === originCity : s.sequence < destSeq);
-  const dropStops = stops.filter(s => s.city ? s.city === destCity : s.sequence >= destSeq);
+  const hasBoardingFlags = stops.some(s => s.boardingAllowed !== undefined);
+  const pickupStops = stops.filter(s =>
+    hasBoardingFlags ? s.boardingAllowed : (s.city ? s.city === originCity : s.sequence <= originSeq)
+  );
+  const dropStops = stops.filter(s =>
+    hasBoardingFlags ? s.alightingAllowed : (s.city ? s.city === destCity : s.sequence >= destSeq)
+  );
 
   const pickupStop = pickupStopId ? stops.find(s => s.stopId === pickupStopId) : null;
   const dropStop = dropStopId ? stops.find(s => s.stopId === dropStopId) : null;
