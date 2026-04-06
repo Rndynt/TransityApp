@@ -111,7 +111,7 @@ function BottomNav() {
   const { page, navigate } = useNav();
   const { isLoggedIn } = useAuth();
 
-  const hide = ['search-results', 'select-stops', 'select-seats', 'booking-confirm', 'booking-detail'].includes(page.name);
+  const hide = ['select-stops', 'select-seats', 'booking-confirm'].includes(page.name);
   if (hide) return null;
 
   const tabs = [
