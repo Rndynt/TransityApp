@@ -74,7 +74,7 @@ export default function BookingDetailPage({ bookingId, source }: Props) {
         </div>
       </div>
 
-      <div className="px-4 pt-4 pb-8">
+      <div className="px-4 pt-4 pb-24">
         <div className="bg-white rounded-2xl shadow-soft overflow-hidden anim-slide-up">
           <div className="p-4">
             <p className="font-bold text-[16px] text-slate-800 mb-3">{booking.patternName || booking.patternCode || booking.operatorName || 'Detail Perjalanan'}</p>

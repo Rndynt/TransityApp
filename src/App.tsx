@@ -121,7 +121,7 @@ function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-teal-900/5 safe-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white backdrop-blur-xl shadow-[0_-2px_12px_rgba(0,0,0,0.08)] safe-bottom">
       <div className="flex">
         {tabs.map((tab) => {
           const active =

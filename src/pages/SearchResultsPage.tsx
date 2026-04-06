@@ -122,7 +122,7 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
         </div>
       </div>
 
-      <div className="px-4 pt-4 pb-8">
+      <div className="px-4 pt-4 pb-24">
         {!isLoading && allTrips.length > 0 && (
           <div className="flex items-center gap-2 mb-3">
             <button
