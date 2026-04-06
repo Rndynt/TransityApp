@@ -8,6 +8,7 @@ import BookingConfirmPage from '@/pages/BookingConfirmPage';
 import BookingDetailPage from '@/pages/BookingDetailPage';
 import MyTripsPage from '@/pages/MyTripsPage';
 import AuthPage from '@/pages/AuthPage';
+import OnboardingPage, { hasSeenOnboarding } from '@/pages/OnboardingPage';
 import { Home, Ticket, UserCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -165,6 +166,8 @@ function BottomNav() {
 
 function AppShell() {
   const { isLoading } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(!hasSeenOnboarding());
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-4">
@@ -179,6 +182,11 @@ function AppShell() {
       </div>
     );
   }
+
+  if (showOnboarding) {
+    return <OnboardingPage onDone={() => setShowOnboarding(false)} />;
+  }
+
   return (
     <div className="min-h-screen bg-background relative">
       <PageRouter />

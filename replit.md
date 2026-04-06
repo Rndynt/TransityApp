@@ -5,14 +5,14 @@ Aplikasi web B2C untuk pelanggan Transity — memungkinkan pengguna mencari jadw
 ## Stack
 
 - **Frontend**: React 18 + Vite + TailwindCSS
-- **Backend/Server**: Fastify (proxy ke TransityConsole gateway & TransityTerminal)
+- **Backend/Server**: Fastify (proxy semua API ke TransityConsole gateway)
 - **Language**: TypeScript (ESM)
 
 ## Struktur
 
 ```
 src/           # Frontend React (pages, components, lib)
-server/        # Fastify server (dual-upstream proxy + serve Vite dev)
+server/        # Fastify server (proxy ke Console + serve Vite dev)
 public/        # Static assets
 ```
 
@@ -21,21 +21,20 @@ public/        # Static assets
 ```
 TransityApp (ini)
      │
-     ├─ /api/gateway/* ──▶ TransityConsole (CONSOLE_URL)
-     │                        └─▶ Operator A Terminal
-     │                        └─▶ Operator B Terminal
-     │
-     └─ /api/app/*     ──▶ TransityTerminal langsung (API_UPSTREAM)
-                           (untuk auth & booking list — sementara)
+     └─ /api/* ──▶ TransityConsole (CONSOLE_URL)
+                       ├─ /api/gateway/* (trips, seatmap, bookings, materialize)
+                       └─ /api/app/*     (auth, booking list — diteruskan Console ke Terminal)
 ```
+
+Semua API request diarahkan ke Console. Tidak ada koneksi langsung ke Terminal.
 
 ## Environment Variables
 
 | Variable | Default | Keterangan |
 |---|---|---|
 | `PORT` | `5000` | Port server |
-| `API_UPSTREAM` | `https://nusa-terminal.transity.web.id` | TransityTerminal langsung (auth, booking list) |
-| `CONSOLE_URL` | _(kosong)_ | TransityConsole gateway (trips, seatmap, bookings baru) — fallback ke API_UPSTREAM jika kosong |
+| `CONSOLE_URL` | _(kosong)_ | TransityConsole gateway — semua API lewat sini |
+| `API_UPSTREAM` | `https://nusa-terminal.transity.web.id` | Fallback jika CONSOLE_URL kosong |
 | `NODE_ENV` | `development` | Mode aplikasi |
 
 ## Scripts
@@ -44,33 +43,45 @@ TransityApp (ini)
 - `npm run build` — Build frontend (vite) + server (tsc)
 - `npm start` — Jalankan production build
 
-## Integrasi Gateway (ECOSYSTEM.md)
+## Fitur
 
-Berdasarkan [ECOSYSTEM.md](https://github.com/Rndynt/TransityConsole/blob/main/docs/ECOSYSTEM.md), TransityApp harus terhubung ke TransityConsole sebagai backend tunggal. Integrasi yang telah dilakukan:
+### Onboarding
+- Halaman onboarding 3 slide untuk pengguna baru (swipeable)
+- Disimpan di `localStorage` (`t_onboarding_done`) — hanya muncul sekali
+- File: `src/pages/OnboardingPage.tsx`
 
-### Endpoint yang sudah dimigrasi ke Gateway (`/api/gateway/*`):
-- `GET /api/gateway/cities` — Daftar kota dari semua operator
-- `GET /api/gateway/trips/search` — Pencarian perjalanan lintas operator
-- `GET /api/gateway/trips/{tripId}` — Detail perjalanan (untuk stops)
-- `GET /api/gateway/trips/{tripId}/seatmap` — Denah kursi
-- `POST /api/gateway/bookings` — Buat pemesanan baru
-- `GET /api/gateway/bookings/{bookingId}` — Detail pesanan (setelah booking via gateway)
+### Trip Search & Booking Flow
+1. HomePage → pilih kota, tanggal, operator
+2. SearchResultsPage → daftar jadwal dari semua operator
+3. SelectStopsPage → pilih titik naik/turun (filter pakai `boardingAllowed`/`alightingAllowed`)
+4. **Materialize** — trip virtual di-materialize lewat `POST /api/gateway/trips/materialize` (kirim `baseId`, `operatorSlug`, `serviceDate`)
+5. SelectSeatsPage → pilih kursi dari seatmap
+6. BookingConfirmPage → konfirmasi & bayar
 
-### Endpoint yang tetap ke Terminal (`/api/app/*`):
-- `POST /api/app/auth/register` / `login` / `GET /api/app/auth/me` — Auth penumpang
-- `GET /api/app/bookings` — Daftar pesanan (My Trips)
+### Komponen Penting
+- `OperatorBottomSheet` — filter operator (reusable, searchable)
+- `OperatorLogo` — logo operator dengan fallback initial+color
+- `CityBottomSheet` — pilih kota (tanpa auto-focus keyboard)
+
+## Endpoint Gateway
+
+### Sudah dipakai (`/api/gateway/*`):
+- `GET /api/gateway/cities` — Daftar kota
+- `GET /api/gateway/trips/search` — Pencarian jadwal
+- `POST /api/gateway/trips/materialize` — Materialize trip virtual
+- `GET /api/gateway/trips/{tripId}` — Detail trip
+- `GET /api/gateway/trips/{tripId}/seatmap` — Seatmap
+- `POST /api/gateway/bookings` — Buat pemesanan
+- `GET /api/gateway/bookings/{bookingId}` — Detail pesanan
+
+### Endpoint auth/booking (`/api/app/*`, diteruskan Console ke Terminal):
+- `POST /api/app/auth/register` / `login` / `GET /api/app/auth/me`
+- `GET /api/app/bookings` — Daftar pesanan
 - `POST /api/app/bookings/{id}/cancel` — Batalkan pesanan
 
-### Perubahan data model:
-- `TripSearchResult`: field `origin.stopName`, `origin.cityName`, `origin.departureTime` (bukan `name`, `city`, `departAt`)
-- `TripSearchResult`: tambah `operatorSlug`, `operatorLogo`, `operatorColor`, `isVirtual`
-- `CreateBookingData`: tambah field `serviceDate` (wajib)
-- `GatewayBookingResponse`: menggunakan `bookingId` (bukan `id`)
-- Virtual trips: tidak memiliki seatmap — UI menampilkan opsi lanjut tanpa pilih kursi
+## Data Model Notes
 
-### Cara set CONSOLE_URL:
-Tambahkan ke environment variables:
-```
-CONSOLE_URL=https://your-transity-console-domain.com
-```
-Jika `CONSOLE_URL` tidak diset, semua request (termasuk gateway) akan diteruskan ke `API_UPSTREAM`.
+- Semua trip dari search bisa virtual (`isVirtual: true`) — perlu materialize sebelum seatmap
+- Raw stops tersedia di `raw.stops` pada search response — langsung digunakan tanpa fetch detail
+- Stop filtering pakai `boardingAllowed`/`alightingAllowed` flags dari raw stops
+- `operatorSlug` dikirim saat materialize (wajib di production Console)
