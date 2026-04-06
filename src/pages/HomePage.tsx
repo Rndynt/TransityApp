@@ -336,7 +336,6 @@ function CityBottomSheet({ open, title, cities, onSelect, onClose }: {
   useEffect(() => {
     if (open) {
       setQuery('');
-      setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [open]);
 
