@@ -261,10 +261,10 @@ export const tripsApi = {
   getCitiesAndOperators: async (): Promise<{ cities: string[]; operators: OperatorInfo[] }> => {
     const res = await api.get<CitiesFullResponse | ({ city: string; stopCount: number } | string)[]>('/api/gateway/cities');
     if (Array.isArray(res)) {
-      return { cities: [...new Set(res.map((c) => (typeof c === 'string' ? c : c.city)))], operators: [] };
+      return { cities: res.map((c) => (typeof c === 'string' ? c : c.city)), operators: [] };
     }
     const citiesData = res.cities || [];
-    const cities = [...new Set(citiesData.map((c: { city: string; stopCount: number } | string) => (typeof c === 'string' ? c : c.city)))];
+    const cities = citiesData.map((c: { city: string; stopCount: number } | string) => (typeof c === 'string' ? c : c.city));
     const operators: OperatorInfo[] = (res.byOperator || [])
       .filter((op) => op.operatorSlug)
       .map((op) => ({
