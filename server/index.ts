@@ -17,8 +17,7 @@ app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body,
 app.addHook('onRequest', async (req, reply) => {
   if (!req.url.startsWith('/api/')) return;
 
-  const isGateway = req.url.startsWith('/api/gateway/');
-  const upstream = isGateway && CONSOLE_URL
+  const upstream = CONSOLE_URL
     ? `${CONSOLE_URL}${req.url}`
     : `${API_UPSTREAM}${req.url}`;
 
