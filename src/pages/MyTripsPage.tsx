@@ -57,8 +57,11 @@ export default function MyTripsPage() {
     queryKey: ['bookings'],
     queryFn: () => bookingsApi.list(),
     enabled: !!user,
-    refetchInterval: bookings?.some(b => b.status === 'held' && b.holdExpiresAt) ? 30000 : false,
-  } as any);
+    refetchInterval: (query) => {
+      const data = query.state.data as typeof bookings;
+      return data?.some(b => b.status === 'held' && b.holdExpiresAt) ? 30000 : false;
+    },
+  });
 
   const activeCount = bookings?.filter(b => b.status === 'confirmed' || b.status === 'held').length ?? 0;
 
