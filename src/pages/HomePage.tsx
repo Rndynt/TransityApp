@@ -37,7 +37,8 @@ export default function HomePage() {
   const [origin, setOriginRaw] = useState(() => sessionStorage.getItem('t_origin') || '');
   const [destination, setDestinationRaw] = useState(() => sessionStorage.getItem('t_dest') || '');
   const [date, setDateRaw] = useState(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const stored = sessionStorage.getItem('t_date');
     if (stored && /^\d{4}-\d{2}-\d{2}$/.test(stored) && stored >= today) return stored;
     return today;
@@ -54,7 +55,8 @@ export default function HomePage() {
   const setPassengers = (v: number) => { setPassengersRaw(v); sessionStorage.setItem('t_pax', String(v)); };
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     if (date < today) {
       setDate(today);
     }
@@ -135,7 +137,7 @@ export default function HomePage() {
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
+                    min={(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`; })()}
                     className="w-full h-12 pl-10 pr-3 rounded-xl border border-slate-200/80 bg-slate-50/50 text-[14px] font-medium focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600/40 transition-all"
                     data-testid="input-date"
                   />
