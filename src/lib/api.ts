@@ -127,20 +127,32 @@ export interface BookingListItem {
   holdExpiresAt?: string | null;
 }
 
+function isEmptyStop(stop: any): boolean {
+  if (!stop) return true;
+  return !stop.name && !stop.city;
+}
+
+function cleanStop(stop: any): StopSummary | null {
+  if (!stop || isEmptyStop(stop)) return null;
+  return stop;
+}
+
 function normalizeBookingListItem(raw: any): BookingListItem {
+  const amt = raw.finalAmount || raw.totalAmount;
+  const hasValidAmount = amt && amt !== '0' && amt !== '0.00';
   return {
     id: raw.bookingId || raw.id || '',
     tripId: raw.tripId || '',
     serviceDate: raw.serviceDate || null,
     patternCode: raw.patternCode || null,
-    patternName: raw.patternName || raw.operatorName || null,
+    patternName: raw.patternName || null,
     operatorName: raw.operatorName || null,
     status: raw.status || null,
-    totalAmount: raw.finalAmount || raw.totalAmount || null,
-    origin: raw.origin || null,
-    destination: raw.destination || null,
-    passengerCount: raw.passengerCount ?? (raw.seatNumbers?.length || 1),
-    passengerName: raw.passengerName || null,
+    totalAmount: hasValidAmount ? amt : (raw.farePerPerson && raw.seatNumbers ? String(Number(raw.farePerPerson) * raw.seatNumbers.length) : amt),
+    origin: cleanStop(raw.origin),
+    destination: cleanStop(raw.destination),
+    passengerCount: raw.passengerCount ?? (raw.passengers?.length || raw.seatNumbers?.length || 1),
+    passengerName: raw.passengerName || (raw.passengers?.[0]?.fullName) || null,
     seatNumbers: raw.seatNumbers || [],
     createdAt: raw.createdAt || null,
     holdExpiresAt: raw.holdExpiresAt || null,
@@ -179,12 +191,12 @@ function normalizeBookingDetail(raw: any): BookingDetail {
     patternName: raw.patternName || raw.operatorName || null,
     operatorName: raw.operatorName || null,
     operatorSlug: raw.operatorSlug || null,
-    origin: raw.origin || null,
-    destination: raw.destination || null,
-    departAt: raw.departAt || raw.departureTime || null,
-    arriveAt: raw.arriveAt || raw.arrivalTime || null,
+    origin: cleanStop(raw.origin),
+    destination: cleanStop(raw.destination),
+    departAt: raw.departAt || raw.departureTime || raw.origin?.departAt || null,
+    arriveAt: raw.arriveAt || raw.arrivalTime || raw.destination?.arriveAt || null,
     status: raw.status || null,
-    totalAmount: raw.finalAmount || raw.totalAmount || null,
+    totalAmount: (() => { const a = raw.finalAmount || raw.totalAmount; return (a && a !== '0' && a !== '0.00') ? a : (raw.farePerPerson && passengers.length > 0 ? String(Number(raw.farePerPerson) * passengers.length) : a); })(),
     channel: raw.channel || null,
     holdExpiresAt: raw.holdExpiresAt || null,
     qrData: raw.qrData || [],
