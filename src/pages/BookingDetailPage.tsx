@@ -63,8 +63,16 @@ const STATUS_CFG: Record<string, { label: string; variant: 'default' | 'success'
 };
 
 export default function BookingDetailPage({ bookingId, source }: Props) {
-  const { navigate, goBack } = useNav();
+  const { navigate, navigateReplace, goBack } = useNav();
   const queryClient = useQueryClient();
+
+  const handleBack = () => {
+    if (source === 'gateway') {
+      navigateReplace({ name: 'my-trips' });
+    } else {
+      goBack();
+    }
+  };
 
   const { data: booking, isLoading, error } = useQuery({
     queryKey: ['booking', bookingId, source],
@@ -86,7 +94,7 @@ export default function BookingDetailPage({ bookingId, source }: Props) {
   if (error || !booking) {
     return (
       <div>
-        <PageHeader title="Detail Pesanan" onBack={goBack} />
+        <PageHeader title="Detail Pesanan" onBack={handleBack} />
         <p className="text-center text-slate-400 py-10">Pesanan tidak ditemukan</p>
       </div>
     );

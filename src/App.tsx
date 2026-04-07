@@ -52,11 +52,12 @@ export const useAuth = () => useContext(AuthContext);
 interface NavCtx {
   page: Page;
   navigate: (p: Page) => void;
+  navigateReplace: (p: Page) => void;
   goBack: () => void;
 }
 
 const NavContext = createContext<NavCtx>({
-  page: { name: 'home' }, navigate: () => {}, goBack: () => {},
+  page: { name: 'home' }, navigate: () => {}, navigateReplace: () => {}, goBack: () => {},
 });
 
 export const useNav = () => useContext(NavContext);
@@ -107,11 +108,18 @@ function NavProvider({ children }: { children: React.ReactNode }) {
   const navigate = useCallback((p: Page) => {
     setHistory((h) => [...h, p]); window.scrollTo({ top: 0 });
   }, []);
+  const navigateReplace = useCallback((p: Page) => {
+    setHistory((h) => {
+      const next = h.length > 1 ? h.slice(0, -1) : [...h];
+      next.push(p);
+      return next;
+    }); window.scrollTo({ top: 0 });
+  }, []);
   const goBack = useCallback(() => {
     setHistory((h) => (h.length > 1 ? h.slice(0, -1) : h)); window.scrollTo({ top: 0 });
   }, []);
   return (
-    <NavContext.Provider value={{ page, navigate, goBack }}>{children}</NavContext.Provider>
+    <NavContext.Provider value={{ page, navigate, navigateReplace, goBack }}>{children}</NavContext.Provider>
   );
 }
 

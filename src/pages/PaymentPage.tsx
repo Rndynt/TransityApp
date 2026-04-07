@@ -95,7 +95,7 @@ function useCountdown(expiresAt: string | null | undefined) {
 }
 
 export default function PaymentPage({ tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, seats, tripLabel, fare, originStopName, destStopName, originTime, destTime, passengers, bookingId, holdExpiresAt }: Props) {
-  const { navigate } = useNav();
+  const { navigate, navigateReplace } = useNav();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [voucherCode, setVoucherCode] = useState('');
   const [voucherApplied, setVoucherApplied] = useState<{ code: string; discount: number } | null>(null);
@@ -131,7 +131,7 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
   const payMutation = useMutation({
     mutationFn: (data: PayBookingData) => bookingsApi.pay(bookingId, data),
     onMutate: () => setSubmitting(true),
-    onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.bookingId || bookingId, source: 'gateway' }),
+    onSuccess: (booking) => navigateReplace({ name: 'booking-detail', bookingId: booking.bookingId || bookingId, source: 'gateway' }),
     onError: (err: any) => {
       if (err?.code === 'HOLD_EXPIRED') {
         setError('Waktu pemesanan telah habis. Silakan ulangi pemesanan.');
