@@ -10,7 +10,7 @@ import PullToRefreshIndicator from '@/components/PullToRefreshIndicator';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { Loader2, SearchX, Clock, MapPin, ChevronDown, ChevronUp, Users, CheckCircle2, ArrowRight, SlidersHorizontal, Bus } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, addDays, isSameDay, isToday, isTomorrow } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { TripCardSkeleton } from '@/components/ui/skeleton';
@@ -36,12 +36,72 @@ interface Props {
   operatorFilter?: string | null;
 }
 
+function generateDateRange(baseDate: string, days: number): Date[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dates: Date[] = [];
+  for (let i = 0; i < days; i++) {
+    dates.push(addDays(today, i));
+  }
+  const selected = parseISO(baseDate);
+  if (selected < today) {
+    dates.unshift(selected);
+  }
+  return dates;
+}
+
+function getDateChipLabel(d: Date): string {
+  if (isToday(d)) return 'Hari Ini';
+  if (isTomorrow(d)) return 'Besok';
+  return format(d, 'EEE', { locale: idLocale });
+}
+
+function DateStrip({ currentDate, onChangeDate }: {
+  currentDate: string;
+  onChangeDate: (newDate: string) => void;
+}) {
+  const dates = generateDateRange(currentDate, 7);
+  const selected = parseISO(currentDate);
+
+  return (
+    <div className="flex gap-1.5 mt-3 -mx-4 px-4 pb-0.5 overflow-x-auto scrollbar-hide">
+      {dates.map((d) => {
+        const iso = format(d, 'yyyy-MM-dd');
+        const isActive = isSameDay(d, selected);
+        return (
+          <button
+            key={iso}
+            onClick={() => { if (!isActive) onChangeDate(iso); }}
+            className={cn(
+              'flex flex-col items-center min-w-[52px] px-2 py-1.5 rounded-xl text-center transition-all shrink-0 active:scale-[0.95]',
+              isActive
+                ? 'bg-white/20 ring-1 ring-white/30'
+                : 'bg-white/5 hover:bg-white/10',
+            )}
+          >
+            <span className={cn('text-[10px] font-semibold leading-tight', isActive ? 'text-white' : 'text-teal-300/60')}>
+              {getDateChipLabel(d)}
+            </span>
+            <span className={cn('text-[15px] font-extrabold font-display leading-tight', isActive ? 'text-white' : 'text-teal-200/80')}>
+              {format(d, 'd')}
+            </span>
+            <span className={cn('text-[9px] font-semibold uppercase tracking-wider leading-tight', isActive ? 'text-teal-200' : 'text-teal-300/50')}>
+              {format(d, 'MMM', { locale: idLocale })}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function SearchResultsPage({ originCity, destinationCity, date, passengers, operatorFilter }: Props) {
   const { navigate, goBack } = useNav();
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(operatorFilter ?? null);
   const [operatorSheetOpen, setOperatorSheetOpen] = useState(false);
   const queryClient = useQueryClient();
+  const [activeDate, setActiveDate] = useState(date);
 
   const {
     data,
@@ -51,16 +111,21 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['trips-search-infinite', originCity, destinationCity, date, passengers],
+    queryKey: ['trips-search-infinite', originCity, destinationCity, activeDate, passengers],
     queryFn: ({ pageParam }) =>
-      tripsApi.searchPaginated({ originCity, destinationCity, date, passengers, page: pageParam, limit: PAGE_LIMIT }),
+      tripsApi.searchPaginated({ originCity, destinationCity, date: activeDate, passengers, page: pageParam, limit: PAGE_LIMIT }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.page + 1 : undefined,
   });
 
   const handlePullRefresh = useCallback(async () => {
-    await queryClient.resetQueries({ queryKey: ['trips-search-infinite', originCity, destinationCity, date, passengers] });
-  }, [queryClient, originCity, destinationCity, date, passengers]);
+    await queryClient.resetQueries({ queryKey: ['trips-search-infinite', originCity, destinationCity, activeDate, passengers] });
+  }, [queryClient, originCity, destinationCity, activeDate, passengers]);
+
+  const handleDateChange = useCallback((newDate: string) => {
+    setActiveDate(newDate);
+    setActiveFilter(null);
+  }, []);
 
   const { containerRef, pullDistance, isRefreshing, progress, isPastThreshold } = usePullToRefresh({
     onRefresh: handlePullRefresh,
@@ -116,17 +181,22 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
     });
   };
 
-  let dateLabel = date;
-  try { dateLabel = format(parseISO(date), 'EEE, d MMM yyyy', { locale: idLocale }); } catch {}
+  let dateLabel = activeDate;
+  try { dateLabel = format(parseISO(activeDate), 'EEE, d MMM yyyy', { locale: idLocale }); } catch {}
 
   return (
     <div ref={containerRef} className="anim-fade min-h-screen bg-slate-50 overflow-y-auto">
       <PageHeader
         title={`${originCity} → ${destinationCity}`}
-        subtitle={`${dateLabel} · ${passengers} penumpang`}
+        subtitle={`${passengers} penumpang`}
         onBack={goBack}
         sticky
-      />
+      >
+        <DateStrip
+          currentDate={activeDate}
+          onChangeDate={handleDateChange}
+        />
+      </PageHeader>
 
       <PullToRefreshIndicator
         pullDistance={pullDistance}
