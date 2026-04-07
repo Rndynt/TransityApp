@@ -3,7 +3,7 @@ import { useNav, useAuth } from '@/App';
 import { bookingsApi, type BookingListItem } from '@/lib/api';
 import { fmtCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Ticket, ChevronRight, LogIn, CalendarDays } from 'lucide-react';
+import { Ticket, ChevronRight, LogIn, CalendarDays, Search } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import { BookingCardSkeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -72,16 +72,24 @@ export default function MyTripsPage() {
         )}
 
         {isLoggedIn && !isLoading && bookings && bookings.length === 0 && (
-          <div className="text-center py-14 anim-fade">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white shadow-soft flex items-center justify-center">
-              <Ticket className="w-8 h-8 text-slate-300" />
+          <div className="flex flex-col items-center justify-center py-16 anim-fade">
+            <div className="relative mb-6">
+              <div className="w-24 h-24 rounded-full bg-teal-50 flex items-center justify-center">
+                <Ticket className="w-11 h-11 text-teal-400" />
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center border-4 border-white shadow-sm">
+                <span className="text-[16px]">✨</span>
+              </div>
             </div>
-            <p className="font-bold text-[16px] text-slate-700 mb-1">Belum ada pesanan</p>
-            <p className="text-[13px] text-slate-400 mt-1 mb-6">Yuk pesan tiket shuttle pertamamu!</p>
+            <h3 className="font-display font-bold text-[18px] text-slate-800 mb-2">Belum Ada Perjalanan</h3>
+            <p className="text-[13px] text-slate-400 text-center max-w-[240px] leading-relaxed mb-8">
+              Perjalanan seru menunggumu! Cari dan pesan tiket shuttle bus favoritmu sekarang.
+            </p>
             <Button
-              className="h-12 px-10 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[14px] font-bold shadow-lg shadow-teal-900/15"
+              className="h-12 px-10 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[14px] font-bold shadow-lg shadow-teal-900/15 gap-2"
               onClick={() => navigate({ name: 'home' })}
             >
+              <Search className="w-4 h-4" />
               Cari Perjalanan
             </Button>
           </div>
