@@ -6,6 +6,7 @@ import { fmtTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CircleDot, MapPin, Check, Loader2, ChevronRight, Clock, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { StopCardSkeleton } from '@/components/ui/skeleton';
 
 interface Props {
   tripId: string;
@@ -124,9 +125,10 @@ export default function SelectStopsPage({ tripId, serviceDate, passengers, tripL
             <p className="text-white font-semibold text-[15px]">Pilih Titik Naik & Turun</p>
           </div>
         </div>
-        <div className="flex flex-col items-center justify-center py-32 gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
-          <p className="text-[13px] text-slate-400 font-medium">Memuat rute perjalanan...</p>
+        <div className="px-4 pt-6 space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <StopCardSkeleton key={i} />
+          ))}
         </div>
       </div>
     );

@@ -10,6 +10,7 @@ import { ArrowLeft, Loader2, SearchX, Clock, MapPin, ChevronDown, ChevronUp, Use
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { TripCardSkeleton } from '@/components/ui/skeleton';
 
 const PAGE_LIMIT = 10;
 
@@ -172,11 +173,14 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
         )}
 
         {isLoading && (
-          <div className="flex flex-col items-center py-20 gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center">
-              <Loader2 className="w-7 h-7 animate-spin text-teal-600" />
+          <div className="space-y-3 anim-fade">
+            <div className="flex items-center gap-2 mb-1">
+              <Loader2 className="w-4 h-4 animate-spin text-teal-500" />
+              <p className="text-[12px] text-slate-400 font-medium">Mencari perjalanan...</p>
             </div>
-            <p className="text-[13px] text-slate-400 font-medium">Mencari perjalanan dari semua operator...</p>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <TripCardSkeleton key={i} />
+            ))}
           </div>
         )}
 

@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Loader2, QrCode, Users, XCircle, CheckCircle2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { cn } from '@/lib/utils';
+import { BookingDetailSkeleton } from '@/components/ui/skeleton';
 
 interface Props {
   bookingId: string;
@@ -40,11 +41,7 @@ export default function BookingDetailPage({ bookingId, source }: Props) {
   });
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
-      </div>
-    );
+    return <BookingDetailSkeleton />;
   }
 
   if (error || !booking) {

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import OperatorLogo from '@/components/OperatorLogo';
 import { ArrowLeft, Loader2, Clock, MapPin, Users, Bus, ChevronRight, Route, Banknote, ShieldCheck, Info, Star, Plug, Snowflake, Wifi, Armchair, Luggage, Droplets, Music, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { useState } from 'react';
@@ -230,8 +231,16 @@ export default function TripDetailPage({ tripId, serviceDate, passengers, origin
             </div>
 
             {detailLoading && stops.length === 0 ? (
-              <div className="flex justify-center py-6">
-                <Loader2 className="w-5 h-5 animate-spin text-teal-500" />
+              <div className="ml-5 space-y-3 py-1">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <Skeleton className="h-3 w-12" />
+                    <div className="space-y-1.5 flex-1">
+                      <Skeleton className="h-3.5 w-32" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : stops.length > 0 ? (
               <div className="ml-1 pl-4 border-l-2 border-teal-100 space-y-0">

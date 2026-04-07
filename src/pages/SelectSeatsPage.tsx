@@ -6,6 +6,7 @@ import { fmtCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SeatGridSkeleton } from '@/components/ui/skeleton';
 
 interface Props {
   tripId: string;
@@ -102,9 +103,8 @@ export default function SelectSeatsPage({ tripId, serviceDate, originStopId, des
 
       <div className="px-4 pt-4 pb-32">
         {isLoading && (
-          <div className="flex flex-col items-center py-20 gap-3">
-            <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
-            <p className="text-[13px] text-slate-400 font-medium">Memuat denah kursi...</p>
+          <div className="anim-fade">
+            <SeatGridSkeleton />
           </div>
         )}
 

@@ -3,7 +3,8 @@ import { useNav, useAuth } from '@/App';
 import { bookingsApi, type BookingListItem } from '@/lib/api';
 import { fmtCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Ticket, ChevronRight } from 'lucide-react';
+import { Ticket, ChevronRight } from 'lucide-react';
+import { BookingCardSkeleton } from '@/components/ui/skeleton';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -35,8 +36,10 @@ export default function MyTripsPage() {
 
       <div className="px-4 pb-28">
         {isLoading && (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+          <div className="space-y-3 anim-fade">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <BookingCardSkeleton key={i} />
+            ))}
           </div>
         )}
 

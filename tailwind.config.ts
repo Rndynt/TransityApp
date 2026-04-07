@@ -70,6 +70,15 @@ const config: Config = {
         'float': '0 8px 30px rgba(0,0,0,0.07)',
         'glow': '0 0 20px rgba(13, 148, 136, 0.12)',
       },
+      keyframes: {
+        shimmer: {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
+      },
+      animation: {
+        shimmer: 'shimmer 1.8s ease-in-out infinite',
+      },
     },
   },
   plugins: [animate],
