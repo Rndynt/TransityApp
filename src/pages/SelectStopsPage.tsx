@@ -4,7 +4,8 @@ import { useNav } from '@/App';
 import { tripsApi, type TripStopInfo } from '@/lib/api';
 import { fmtTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CircleDot, MapPin, Check, Loader2, ChevronRight, Clock, ArrowRight } from 'lucide-react';
+import { CircleDot, MapPin, Check, Loader2, ChevronRight, Clock, ArrowRight } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { cn } from '@/lib/utils';
 import { StopCardSkeleton } from '@/components/ui/skeleton';
 
@@ -117,14 +118,7 @@ export default function SelectStopsPage({ tripId, serviceDate, passengers, tripL
   if (detailLoading) {
     return (
       <div className="anim-fade min-h-screen bg-slate-50">
-        <div className="bg-gradient-to-b from-teal-900 to-teal-800 px-4 pt-3 pb-5">
-          <div className="flex items-center gap-3">
-            <button onClick={goBack} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10">
-              <ArrowLeft className="w-5 h-5 text-white" />
-            </button>
-            <p className="text-white font-semibold text-[15px]">Pilih Titik Naik & Turun</p>
-          </div>
-        </div>
+        <PageHeader title="Pilih Titik Naik & Turun" onBack={goBack} />
         <div className="px-4 pt-6 space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <StopCardSkeleton key={i} />
@@ -136,17 +130,7 @@ export default function SelectStopsPage({ tripId, serviceDate, passengers, tripL
 
   return (
     <div className="anim-fade min-h-screen bg-slate-50">
-      <div className="bg-gradient-to-b from-teal-900 to-teal-800 px-4 pt-3 pb-5">
-        <div className="flex items-center gap-3">
-          <button onClick={goBack} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors" data-testid="button-back">
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-bold text-[16px]">Pilih Titik Naik & Turun</p>
-            <p className="text-teal-300 text-[12px] mt-0.5 truncate">{tripLabel}</p>
-          </div>
-        </div>
-      </div>
+      <PageHeader title="Pilih Titik Naik & Turun" subtitle={tripLabel} onBack={goBack} />
 
       <div className="px-4 -mt-2 pb-36">
         <div className="bg-white rounded-2xl shadow-soft p-1.5 mb-4">

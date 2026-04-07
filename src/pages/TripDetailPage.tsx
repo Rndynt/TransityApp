@@ -4,7 +4,8 @@ import { tripsApi, type TripSearchResult, type TripStopInfo } from '@/lib/api';
 import { fmtCurrency, fmtTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import OperatorLogo from '@/components/OperatorLogo';
-import { ArrowLeft, Loader2, Clock, MapPin, Users, Bus, ChevronRight, Route, Banknote, ShieldCheck, Info, Star, Plug, Snowflake, Wifi, Armchair, Luggage, Droplets, Music, ShieldAlert } from 'lucide-react';
+import { Loader2, Clock, MapPin, Users, Bus, ChevronRight, Route, Banknote, ShieldCheck, Info, Star, Plug, Snowflake, Wifi, Armchair, Luggage, Droplets, Music, ShieldAlert } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, parseISO } from 'date-fns';
@@ -106,15 +107,8 @@ export default function TripDetailPage({ tripId, serviceDate, passengers, origin
 
   return (
     <div className="anim-fade min-h-screen bg-slate-50">
-      <div className="hero-mesh px-4 pt-3 pb-6">
-        <div className="flex items-center gap-3 mb-5">
-          <button onClick={goBack} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors">
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <h1 className="text-[17px] font-bold text-white">Detail Perjalanan</h1>
-        </div>
-
-        <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/15 p-4">
+      <PageHeader title="Detail Perjalanan" onBack={goBack} className="pb-6">
+        <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/15 p-4 mt-4">
           <div className="flex items-center gap-3 mb-3">
             <OperatorLogo
               name={trip.operatorName}
@@ -165,7 +159,7 @@ export default function TripDetailPage({ tripId, serviceDate, passengers, origin
             </div>
           </div>
         </div>
-      </div>
+      </PageHeader>
 
       <div className="px-4 -mt-2 pb-32 space-y-3">
         <div className="bg-white rounded-2xl shadow-soft overflow-hidden anim-slide-up">

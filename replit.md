@@ -78,6 +78,7 @@ Semua API request diarahkan ke Console Gateway. Auth terpusat di Console — sat
 - **AboutPage** — Info versi app
 
 ### Komponen Penting
+- `PageHeader` — header halaman reusable (title, subtitle, back button, rightContent, children, sticky, className). Digunakan di semua halaman.
 - `OperatorBottomSheet` — filter operator (reusable, searchable)
 - `OperatorLogo` — logo operator dengan fallback initial+color
 - `CityBottomSheet` — pilih kota (tanpa auto-focus keyboard)

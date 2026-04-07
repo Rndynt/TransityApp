@@ -1,5 +1,6 @@
 import { useNav } from '@/App';
-import { ArrowLeft, Shield, FileText, Mail, Globe, Heart, ExternalLink } from 'lucide-react';
+import { Shield, FileText, Mail, Globe, Heart, ExternalLink } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { cn } from '@/lib/utils';
 
 const APP_VERSION = '1.0.0';
@@ -16,14 +17,7 @@ export default function AboutPage() {
 
   return (
     <div className="anim-fade min-h-screen bg-slate-50 pb-28">
-      <div className="hero-mesh px-4 pt-3 pb-8">
-        <div className="flex items-center gap-3">
-          <button onClick={goBack} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors">
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <h1 className="text-[17px] font-bold text-white">Tentang Aplikasi</h1>
-        </div>
-      </div>
+      <PageHeader title="Tentang Aplikasi" onBack={goBack} className="pb-8" />
 
       <div className="px-4 -mt-4">
         <div className="bg-white rounded-2xl shadow-soft overflow-hidden mb-4">

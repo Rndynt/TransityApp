@@ -3,7 +3,8 @@ import { useAuth, useNav } from '@/App';
 import { authApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Mail, Phone, Calendar, LogOut, HelpCircle, Info, Bell, ChevronRight, Shield, Lock, Loader2, Pencil, X, Check } from 'lucide-react';
+import { Mail, Phone, Calendar, LogOut, HelpCircle, Info, Bell, ChevronRight, Shield, Lock, Loader2, Pencil, X, Check } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -88,15 +89,8 @@ export default function ProfilePage() {
 
   return (
     <div className="anim-fade min-h-screen bg-slate-50 pb-28">
-      <div className="hero-mesh px-4 pt-3 pb-8">
-        <div className="flex items-center gap-3 mb-6">
-          <button onClick={goBack} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors">
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <h1 className="text-[17px] font-bold text-white">Profil Saya</h1>
-        </div>
-
-        <div className="flex items-center gap-4">
+      <PageHeader title="Profil Saya" onBack={goBack} className="pb-8">
+        <div className="flex items-center gap-4 mt-4">
           <div className="w-[72px] h-[72px] rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center shadow-lg">
             {user.avatarUrl ? (
               <img src={user.avatarUrl} alt={user.fullName} className="w-full h-full rounded-2xl object-cover" />
@@ -112,7 +106,7 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-      </div>
+      </PageHeader>
 
       <div className="px-4 -mt-4">
         <div className="bg-white rounded-2xl shadow-soft overflow-hidden mb-4">

@@ -1,5 +1,6 @@
 import { useNav } from '@/App';
-import { ArrowLeft, Bell, Megaphone, Tag, Info, BellOff } from 'lucide-react';
+import { Bell, Megaphone, Tag, Info, BellOff } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { cn } from '@/lib/utils';
 
 interface Notification {
@@ -51,14 +52,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="anim-fade min-h-screen bg-slate-50 pb-28">
-      <div className="hero-mesh px-4 pt-3 pb-5">
-        <div className="flex items-center gap-3">
-          <button onClick={goBack} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors">
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <h1 className="text-[17px] font-bold text-white">Notifikasi</h1>
-        </div>
-      </div>
+      <PageHeader title="Notifikasi" onBack={goBack} />
 
       <div className="px-4 -mt-2">
         {notifications.length === 0 ? (

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNav } from '@/App';
-import { ArrowLeft, ChevronDown, Search, MessageCircle, HelpCircle, CreditCard, Ticket, Ban, Clock, MapPin } from 'lucide-react';
+import { ChevronDown, Search, MessageCircle, HelpCircle, CreditCard, Ticket, Ban, Clock, MapPin } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { cn } from '@/lib/utils';
 
 interface FaqItem {
@@ -88,15 +89,8 @@ export default function HelpPage() {
 
   return (
     <div className="anim-fade min-h-screen bg-slate-50 pb-28">
-      <div className="hero-mesh px-4 pt-3 pb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <button onClick={goBack} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors">
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <h1 className="text-[17px] font-bold text-white">Bantuan & FAQ</h1>
-        </div>
-
-        <div className="relative">
+      <PageHeader title="Bantuan & FAQ" onBack={goBack} className="pb-6">
+        <div className="relative mt-3">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/40 pointer-events-none" />
           <input
             type="text"
@@ -106,7 +100,7 @@ export default function HelpPage() {
             className="w-full h-11 pl-10 pr-4 rounded-xl bg-white/10 border border-white/15 text-[14px] text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all"
           />
         </div>
-      </div>
+      </PageHeader>
 
       <div className="px-4 pt-2">
         {categories.map(cat => (

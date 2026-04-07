@@ -4,6 +4,7 @@ import { bookingsApi, type BookingListItem } from '@/lib/api';
 import { fmtCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Ticket, ChevronRight, LogIn, CalendarDays } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { BookingCardSkeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { format, parseISO } from 'date-fns';
@@ -32,24 +33,18 @@ export default function MyTripsPage() {
 
   return (
     <div className="anim-fade min-h-screen bg-slate-50">
-      <div className="hero-mesh px-4 pt-3 pb-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-display font-bold text-[20px] text-white">Pesanan Saya</h1>
-            <p className="text-teal-300/80 text-[12px] mt-0.5 font-medium">
-              {isLoggedIn
-                ? (isLoading ? 'Memuat pesanan...' : `${activeCount > 0 ? `${activeCount} tiket aktif` : 'Riwayat dan tiket aktif Anda'}`)
-                : 'Masuk untuk melihat pesanan'
-              }
-            </p>
+      <PageHeader
+        title="Pesanan Saya"
+        subtitle={isLoggedIn
+          ? (isLoading ? 'Memuat pesanan...' : `${activeCount > 0 ? `${activeCount} tiket aktif` : 'Riwayat dan tiket aktif Anda'}`)
+          : 'Masuk untuk melihat pesanan'
+        }
+        rightContent={isLoggedIn && bookings && bookings.length > 0 ? (
+          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+            <CalendarDays className="w-5 h-5 text-teal-200" />
           </div>
-          {isLoggedIn && bookings && bookings.length > 0 && (
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-              <CalendarDays className="w-5 h-5 text-teal-200" />
-            </div>
-          )}
-        </div>
-      </div>
+        ) : undefined}
+      />
 
       <div className="px-4 pt-4 pb-28">
         {!isLoggedIn && (

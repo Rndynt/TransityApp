@@ -5,7 +5,8 @@ import { fmtCurrency, fmtTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, QrCode, Users, XCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, QrCode, Users, XCircle, CheckCircle2 } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { QRCodeSVG } from 'qrcode.react';
 import { cn } from '@/lib/utils';
 import { BookingDetailSkeleton } from '@/components/ui/skeleton';
@@ -46,10 +47,8 @@ export default function BookingDetailPage({ bookingId, source }: Props) {
 
   if (error || !booking) {
     return (
-      <div className="px-4 pt-4">
-        <button onClick={goBack} className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 mb-4" data-testid="button-back">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
+      <div>
+        <PageHeader title="Detail Pesanan" onBack={goBack} />
         <p className="text-center text-slate-400 py-10">Pesanan tidak ditemukan</p>
       </div>
     );
@@ -59,15 +58,11 @@ export default function BookingDetailPage({ bookingId, source }: Props) {
 
   return (
     <div className="anim-fade">
-      <div className="bg-teal-900 px-4 pt-3 pb-4">
-        <div className="flex items-center gap-3">
-          <button onClick={goBack} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors" data-testid="button-back">
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <p className="text-white font-semibold text-[15px] flex-1">Detail Pesanan</p>
-          <Badge variant={st.variant} className="rounded-lg px-2.5 py-1 text-[11px] font-bold">{st.label}</Badge>
-        </div>
-      </div>
+      <PageHeader
+        title="Detail Pesanan"
+        onBack={goBack}
+        rightContent={<Badge variant={st.variant} className="rounded-lg px-2.5 py-1 text-[11px] font-bold">{st.label}</Badge>}
+      />
 
       <div className="px-4 pt-4 pb-24">
         <div className="bg-white rounded-2xl shadow-soft overflow-hidden anim-slide-up">

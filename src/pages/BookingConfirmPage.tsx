@@ -6,7 +6,8 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, User, CreditCard } from 'lucide-react';
+import { Loader2, User, CreditCard } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 
 interface Props {
   tripId: string;
@@ -65,14 +66,7 @@ export default function BookingConfirmPage({ tripId, serviceDate, originStopId, 
 
   return (
     <div className="anim-fade">
-      <div className="bg-teal-900 px-4 pt-3 pb-4">
-        <div className="flex items-center gap-3">
-          <button onClick={goBack} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors" data-testid="button-back">
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <p className="text-white font-semibold text-[15px]">Konfirmasi Pemesanan</p>
-        </div>
-      </div>
+      <PageHeader title="Konfirmasi Pemesanan" onBack={goBack} />
 
       <div className="px-4 pt-4 pb-36">
         <div className="bg-white rounded-2xl shadow-soft overflow-hidden anim-slide-up">

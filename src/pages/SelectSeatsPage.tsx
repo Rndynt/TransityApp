@@ -4,7 +4,8 @@ import { useNav, useAuth } from '@/App';
 import { tripsApi } from '@/lib/api';
 import { fmtCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, Zap } from 'lucide-react';
+import { Loader2, Zap } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { cn } from '@/lib/utils';
 import { SeatGridSkeleton } from '@/components/ui/skeleton';
 
@@ -84,22 +85,16 @@ export default function SelectSeatsPage({ tripId, serviceDate, originStopId, des
 
   return (
     <div className="anim-fade min-h-screen bg-slate-50">
-      <div className="bg-teal-900 px-4 pt-3 pb-4">
-        <div className="flex items-center gap-3">
-          <button onClick={goBack} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors" data-testid="button-back">
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-semibold text-[15px]">Pilih Kursi</p>
-            <p className="text-teal-300 text-[12px] mt-0.5 truncate">{tripLabel}</p>
+      <PageHeader
+        title="Pilih Kursi"
+        subtitle={tripLabel}
+        onBack={goBack}
+        rightContent={!isVirtualTrip ? (
+          <div className="bg-white/15 backdrop-blur px-3 py-1.5 rounded-full">
+            <span className="text-white text-[13px] font-bold">{selected.length}/{passengers}</span>
           </div>
-          {!isVirtualTrip && (
-            <div className="bg-white/15 backdrop-blur px-3 py-1.5 rounded-full">
-              <span className="text-white text-[13px] font-bold">{selected.length}/{passengers}</span>
-            </div>
-          )}
-        </div>
-      </div>
+        ) : undefined}
+      />
 
       <div className="px-4 pt-4 pb-32">
         {isLoading && (
