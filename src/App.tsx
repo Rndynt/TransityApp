@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext, useCallback } from 'react';
-import { store, authApi, type AppUser } from '@/lib/api';
+import { store, authApi, ApiError, type AppUser } from '@/lib/api';
 import HomePage from '@/pages/HomePage';
 import SearchResultsPage from '@/pages/SearchResultsPage';
 import TripDetailPage from '@/pages/TripDetailPage';
@@ -67,7 +67,12 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     if (store.isLoggedIn()) {
       authApi.getMe()
         .then((u) => { setUser(u); store.setAuth(u, store.getToken()!); })
-        .catch(() => { store.logout(); setUser(null); })
+        .catch((err) => {
+          if (err instanceof ApiError && err.status === 401) {
+            store.logout();
+            setUser(null);
+          }
+        })
         .finally(() => setIsLoading(false));
     } else {
       setIsLoading(false);

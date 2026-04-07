@@ -194,6 +194,14 @@ function getToken(): string | null {
   try { return localStorage.getItem('transity_token'); } catch { return null; }
 }
 
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
@@ -206,7 +214,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Terjadi kesalahan' }));
-    throw new Error(err.error || err.message || 'Terjadi kesalahan');
+    throw new ApiError(err.error || err.message || 'Terjadi kesalahan', res.status);
   }
   return res.json();
 }
