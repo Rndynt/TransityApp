@@ -196,10 +196,12 @@ function getToken(): string | null {
 
 export class ApiError extends Error {
   status: number;
+  code?: string;
   details?: unknown;
-  constructor(message: string, status: number, details?: unknown) {
+  constructor(message: string, status: number, code?: string, details?: unknown) {
     super(message);
     this.status = status;
+    this.code = code;
     this.details = details;
   }
 }
@@ -217,8 +219,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Terjadi kesalahan' }));
     const msg = err.error || err.message || 'Terjadi kesalahan';
+    const code = err.code || undefined;
     const details = err.errors || err.details || err.validationErrors || undefined;
-    throw new ApiError(msg, res.status, details);
+    throw new ApiError(msg, res.status, code, details);
   }
   return res.json();
 }

@@ -46,6 +46,10 @@ export default function BookingConfirmPage({ tripId, serviceDate, originStopId, 
     mutationFn: (data: CreateBookingData) => bookingsApi.create(data),
     onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.bookingId, source: 'gateway' }),
     onError: (err: any) => {
+      if (err?.code === 'TERMINAL_ERROR') {
+        setError('Gagal membuat pesanan. Sistem operator sedang bermasalah, silakan coba lagi nanti.');
+        return;
+      }
       let msg = err?.message || 'Terjadi kesalahan';
       if (err?.details) {
         if (Array.isArray(err.details)) {
