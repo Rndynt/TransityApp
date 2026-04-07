@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNav, useAuth } from '@/App';
-import { tripsApi, type OperatorInfo } from '@/lib/api';
+import { tripsApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import OperatorLogo from '@/components/OperatorLogo';
-import OperatorBottomSheet from '@/components/OperatorBottomSheet';
-import { ArrowDownUp, Search, MapPin, CalendarDays, Users, X, Percent, Star, ArrowRight, Bus, ChevronRight } from 'lucide-react';
+import { ArrowDownUp, Search, MapPin, CalendarDays, Users, X, Percent, Star, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const CITY_IMAGES: Record<string, string> = {
@@ -35,7 +33,6 @@ export default function HomePage() {
   const { navigate } = useNav();
   const { user } = useAuth();
   const [cities, setCities] = useState<string[]>([]);
-  const [operators, setOperators] = useState<OperatorInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [origin, setOriginRaw] = useState(() => sessionStorage.getItem('t_origin') || '');
   const [destination, setDestinationRaw] = useState(() => sessionStorage.getItem('t_dest') || '');
@@ -48,10 +45,7 @@ export default function HomePage() {
     const n = parseInt(sessionStorage.getItem('t_pax') || '1', 10);
     return (isNaN(n) || n < 1 || n > 10) ? 1 : n;
   });
-  const [selectedOperator, setSelectedOperator] = useState<string | null>(null);
   const [sheetFor, setSheetFor] = useState<'origin' | 'destination' | null>(null);
-  const [operatorSheetOpen, setOperatorSheetOpen] = useState(false);
-  const selectedOp = operators.find(o => o.slug === selectedOperator);
 
   const setOrigin = (v: string) => { setOriginRaw(v); sessionStorage.setItem('t_origin', v); };
   const setDestination = (v: string) => { setDestinationRaw(v); sessionStorage.setItem('t_dest', v); };
@@ -60,7 +54,7 @@ export default function HomePage() {
 
   useEffect(() => {
     tripsApi.getCitiesAndOperators()
-      .then(({ cities, operators }) => { setCities(cities); setOperators(operators); })
+      .then(({ cities }) => { setCities(cities); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -68,7 +62,7 @@ export default function HomePage() {
   const swap = () => { setOrigin(destination); setDestination(origin); };
   const search = () => {
     if (!origin || !destination || !date) return;
-    navigate({ name: 'search-results', originCity: origin, destinationCity: destination, date, passengers, operatorFilter: selectedOperator });
+    navigate({ name: 'search-results', originCity: origin, destinationCity: destination, date, passengers, operatorFilter: null });
   };
 
   const selectCity = (city: string) => {
@@ -163,38 +157,6 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="mt-4">
-              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.08em] mb-1.5 block">Operator</Label>
-              <button
-                onClick={() => !loading && setOperatorSheetOpen(true)}
-                className={cn(
-                  'w-full h-12 flex items-center gap-3 px-3 rounded-xl border border-slate-200/80 bg-slate-50/50 text-left transition-colors',
-                  loading ? 'cursor-default' : 'hover:bg-teal-50/30',
-                )}
-                data-testid="button-operator-select"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-8 h-8 rounded-lg bg-slate-100 animate-pulse shrink-0" />
-                    <div className="flex-1 h-4 bg-slate-100 rounded-md animate-pulse" />
-                  </>
-                ) : selectedOp ? (
-                  <>
-                    <OperatorLogo name={selectedOp.name} logo={selectedOp.logo} color={selectedOp.color} size="sm" />
-                    <span className="flex-1 text-[14px] font-medium text-slate-900">{selectedOp.name}</span>
-                    <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
-                  </>
-                ) : (
-                  <>
-                    <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center shrink-0">
-                      <Bus className="w-4 h-4 text-teal-600" />
-                    </div>
-                    <span className="flex-1 text-[14px] font-medium text-slate-400">Semua Operator</span>
-                    <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
-                  </>
-                )}
-              </button>
-            </div>
 
             <Button
               onClick={search}
@@ -300,13 +262,6 @@ export default function HomePage() {
         onClose={() => setSheetFor(null)}
       />
 
-      <OperatorBottomSheet
-        open={operatorSheetOpen}
-        operators={operators}
-        selected={selectedOperator}
-        onSelect={setSelectedOperator}
-        onClose={() => setOperatorSheetOpen(false)}
-      />
     </div>
   );
 }
