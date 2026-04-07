@@ -66,7 +66,12 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (store.isLoggedIn()) {
       authApi.getMe()
-        .then((u) => { setUser(u); store.setAuth(u, store.getToken()!); })
+        .then((u) => {
+          if (u && u.id) {
+            setUser(u);
+            store.setAuth(u, store.getToken()!);
+          }
+        })
         .catch((err) => {
           if (err instanceof ApiError && err.status === 401) {
             store.logout();

@@ -234,7 +234,10 @@ export const authApi = {
     api.post<AuthResponse>('/api/gateway/auth/register', data as unknown as Record<string, unknown>),
   login: (data: { email?: string; phone?: string; password: string }) =>
     api.post<AuthResponse>('/api/gateway/auth/login', data as unknown as Record<string, unknown>),
-  getMe: () => api.get<{ user: AppUser }>('/api/gateway/auth/me').then(res => res.user),
+  getMe: () => api.get<Record<string, unknown>>('/api/gateway/auth/me').then(res => {
+    const user = (res as { user?: AppUser }).user || (res as unknown as AppUser);
+    return (user && (user as AppUser).id) ? user as AppUser : null;
+  }),
   updateProfile: (data: { fullName?: string; phone?: string }) =>
     api.put<{ user: AppUser }>('/api/gateway/auth/profile', data as unknown as Record<string, unknown>).then(res => res.user),
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
