@@ -305,38 +305,207 @@ Content-Type: application/json
 
 ---
 
-## 5. GET /api/gateway/bookings (List — Update)
+## 5. GET /api/gateway/bookings (List — UPDATE DIBUTUHKAN)
 
-Response list booking sekarang perlu menyertakan `holdExpiresAt` agar frontend bisa menampilkan countdown pada pesanan yang belum dibayar.
+### Masalah Saat Ini
 
-### Perubahan Field per Item
-
-| Field            | Type    | Baru?    | Keterangan                                                    |
-|------------------|---------|----------|---------------------------------------------------------------|
-| `holdExpiresAt`  | string? | **Ya**   | ISO datetime kapan hold berakhir. `null` jika sudah dibayar   |
-
-### Contoh Item dengan Hold
-
+Response saat ini dari Console:
 ```json
 {
-  "id": "bk_abc123",
-  "tripId": "nusa-shuttle:abc-123",
-  "serviceDate": "2026-04-08",
-  "patternName": "Jakarta - Bandung",
-  "status": "held",
-  "totalAmount": "95000",
-  "origin": { "name": "Cawang", "city": "Jakarta" },
-  "destination": { "name": "Pasteur", "city": "Bandung" },
-  "passengerCount": 1,
-  "holdExpiresAt": "2026-04-08T10:30:00Z"
+  "data": [
+    {
+      "bookingId": "49f340ac-...",
+      "externalBookingId": null,
+      "operatorId": "5c472abb-...",
+      "operatorName": "Nusa Shuttle",
+      "tripId": "nusa-shuttle:3145ae85-...",
+      "status": "cancelled",
+      "passengerName": "Anta",
+      "passengerPhone": "083139882231",
+      "seatNumbers": ["4C"],
+      "totalAmount": "0.00",
+      "discountAmount": null,
+      "finalAmount": "0.00",
+      "paymentMethod": null,
+      "holdExpiresAt": null,
+      "serviceDate": "2026-04-08",
+      "createdAt": "2026-04-07T20:49:48.211Z"
+    }
+  ]
 }
 ```
 
-### Perilaku Frontend
+**Yang kurang / harus diperbaiki:**
+1. **Tidak ada info rute** — customer tidak tahu dari mana ke mana perjalanannya
+2. **Tidak ada nama rute** — `patternName` seperti "Jakarta → Bandung" tidak ada
+3. **`totalAmount` = "0.00"** — harga seharusnya terisi dari fare saat booking dibuat
+4. **Tidak ada `holdExpiresAt`** — untuk booking held, harus ada deadline pembayaran
+5. **Tidak ada waktu keberangkatan** — customer butuh tahu jam berapa berangkat
 
-- Pesanan dengan status `held` ditampilkan dengan badge "Menunggu" (warna kuning) dan countdown timer.
-- Jika countdown habis, tampil "Kedaluwarsa".
-- Backend harus mengubah status `held` → `expired`/`cancelled` setelah waktu habis (cleanup job atau on-demand check).
+### Response yang Dibutuhkan
+
+Setiap item di list booking HARUS mengandung field berikut agar customer bisa memahami pesanannya:
+
+```json
+{
+  "data": [
+    {
+      "bookingId": "49f340ac-...",
+      "tripId": "nusa-shuttle:3145ae85-...",
+      "serviceDate": "2026-04-08",
+      "status": "held",
+
+      "operatorName": "Nusa Shuttle",
+      "patternName": "Jakarta → Bandung",
+
+      "origin": {
+        "name": "Cawang",
+        "city": "Jakarta",
+        "departAt": "2026-04-08T05:00:00Z"
+      },
+      "destination": {
+        "name": "Pasteur",
+        "city": "Bandung",
+        "arriveAt": "2026-04-08T08:00:00Z"
+      },
+
+      "passengerCount": 1,
+      "seatNumbers": ["4C"],
+
+      "totalAmount": "95000",
+      "finalAmount": "95000",
+
+      "holdExpiresAt": "2026-04-08T05:30:00Z",
+      "createdAt": "2026-04-07T20:49:48.211Z"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 20,
+  "hasMore": false
+}
+```
+
+### Field Wajib per Item
+
+| Field            | Type     | Wajib | Keterangan                                                                    |
+|------------------|----------|-------|-------------------------------------------------------------------------------|
+| `bookingId`      | string   | Ya    | ID unik booking                                                              |
+| `tripId`         | string   | Ya    | ID trip (format `operator:id`)                                                |
+| `serviceDate`    | string   | Ya    | Tanggal perjalanan (YYYY-MM-DD)                                               |
+| `status`         | string   | Ya    | `held` / `confirmed` / `completed` / `cancelled` / `expired`                 |
+| `operatorName`   | string   | Ya    | Nama operator (contoh: "Nusa Shuttle")                                        |
+| `patternName`    | string   | Ya    | Nama rute yang mudah dipahami customer (contoh: "Jakarta → Bandung")          |
+| `origin`         | object   | **Ya** | `{ name, city, departAt }` — titik keberangkatan + jam berangkat             |
+| `destination`    | object   | **Ya** | `{ name, city, arriveAt }` — titik tujuan + jam tiba                         |
+| `passengerCount` | number   | Ya    | Jumlah penumpang                                                              |
+| `seatNumbers`    | string[] | Ya    | Array nomor kursi                                                             |
+| `totalAmount`    | string   | **Ya** | Harga total sebelum diskon. **HARUS > 0** untuk booking normal                |
+| `finalAmount`    | string   | Ya    | Harga setelah diskon (sama dengan totalAmount jika tidak ada diskon)           |
+| `holdExpiresAt`  | string?  | **Ya** | ISO datetime deadline pembayaran. `null` jika sudah dibayar/expired           |
+| `createdAt`      | string   | Ya    | ISO datetime pembuatan booking                                                |
+
+### Perbaikan yang Dibutuhkan di Console
+
+1. **Tambahkan `origin` dan `destination` object** — ambil dari data trip/stops yang sudah tersimpan saat booking dibuat
+2. **Tambahkan `patternName`** — ambil dari pattern trip (sudah ada di trip search response)
+3. **Fix `totalAmount`** — harus berisi harga fare × jumlah penumpang, bukan "0.00"
+4. **Tambahkan `holdExpiresAt`** — untuk booking berstatus `held`, set deadline 15-30 menit dari waktu pembuatan
+5. **Tambahkan `passengerCount`** — bisa dihitung dari `seatNumbers.length`
+
+---
+
+## 6. GET /api/gateway/bookings/{bookingId} (Detail — UPDATE DIBUTUHKAN)
+
+### Masalah Saat Ini
+
+Response detail saat ini mengandung masalah yang sama dengan list — field penting tidak tersedia. Customer yang membuka detail pesanan harus bisa melihat semua info perjalanannya.
+
+### Response yang Dibutuhkan
+
+```json
+{
+  "bookingId": "49f340ac-...",
+  "tripId": "nusa-shuttle:3145ae85-...",
+  "serviceDate": "2026-04-08",
+  "status": "held",
+
+  "operatorName": "Nusa Shuttle",
+  "operatorSlug": "nusa-shuttle",
+  "patternCode": "JKT-BDG-02",
+  "patternName": "Jakarta → Bandung · via Grogol — Pasteur",
+
+  "origin": {
+    "stopId": "7584bc05-...",
+    "name": "Daan Mogot Grogol",
+    "city": "Jakarta",
+    "departAt": "2026-04-08T05:00:00Z"
+  },
+  "destination": {
+    "stopId": "e2bd6dda-...",
+    "name": "Buah Batu",
+    "city": "Bandung",
+    "arriveAt": "2026-04-08T08:10:00Z"
+  },
+
+  "passengers": [
+    {
+      "id": "p1",
+      "fullName": "Rendy",
+      "phone": "083139882231",
+      "seatNo": "4B",
+      "fareAmount": "95000"
+    }
+  ],
+
+  "totalAmount": "95000",
+  "discountAmount": "0",
+  "finalAmount": "95000",
+
+  "holdExpiresAt": "2026-04-08T05:30:00Z",
+
+  "paymentMethod": null,
+  "payments": [],
+  "paymentIntent": null,
+
+  "qrData": [],
+
+  "createdAt": "2026-04-07T20:49:48.211Z"
+}
+```
+
+### Field Wajib untuk Detail
+
+Semua field dari list booking **PLUS** tambahan berikut:
+
+| Field            | Type      | Wajib  | Keterangan                                                                   |
+|------------------|-----------|--------|------------------------------------------------------------------------------|
+| `origin.stopId`  | string    | Ya     | ID stop keberangkatan (untuk navigasi ke payment jika resume)                |
+| `origin.departAt`| string    | **Ya** | ISO datetime jam keberangkatan                                                |
+| `destination.stopId` | string | Ya    | ID stop tujuan                                                                |
+| `destination.arriveAt` | string | **Ya** | ISO datetime jam tiba                                                      |
+| `passengers`     | array     | **Ya** | Array penumpang dengan `{ id, fullName, phone, seatNo, fareAmount }`         |
+| `passengers[].fareAmount` | string | Ya | Harga per penumpang                                                     |
+| `holdExpiresAt`  | string?   | **Ya** | Deadline pembayaran. **WAJIB ADA** untuk status `held`                       |
+| `patternCode`    | string    | Ya     | Kode rute (contoh: "JKT-BDG-02")                                             |
+| `patternName`    | string    | **Ya** | Nama rute lengkap                                                             |
+| `operatorName`   | string    | Ya     | Nama operator                                                                 |
+| `totalAmount`    | string    | **Ya** | Harga asli (**bukan "0.00"**)                                                 |
+| `finalAmount`    | string    | Ya     | Harga setelah diskon                                                          |
+| `qrData`         | array     | Ya     | QR tiket digital (kosong jika belum dibayar, terisi setelah confirmed)        |
+| `payments`       | array     | Ya     | Riwayat pembayaran                                                            |
+| `paymentIntent`  | object?   | Ya     | Info payment intent aktif (null jika belum bayar)                             |
+
+### Sumber Data
+
+Semua field ini seharusnya sudah tersedia di Console karena:
+- `origin`, `destination`, `patternName`, `patternCode` → dari data trip/stops yang dipilih saat booking
+- `totalAmount` → dari `farePerPerson × jumlah penumpang` (farePerPerson ada di trip search)
+- `holdExpiresAt` → di-set saat booking dibuat (15-30 menit dari sekarang)
+- `passengers` → dari request body POST /api/gateway/bookings
+- `departAt`, `arriveAt` → dari stops data trip
+
+Console harus menyimpan snapshot data trip (rute, stops, waktu) saat booking dibuat, supaya data tetap bisa ditampilkan meskipun trip sudah lewat atau berubah.
 
 ---
 
@@ -346,15 +515,22 @@ Response list booking sekarang perlu menyertakan `holdExpiresAt` agar frontend b
 |---------------------------------------|--------|------------|-----------|
 | `/api/gateway/bookings`              | POST   | **Update** | Tinggi    |
 | `/api/gateway/bookings/{id}/pay`     | POST   | **Baru**   | Tinggi    |
+| `/api/gateway/bookings`             | GET    | **Update** | **Kritis** |
+| `/api/gateway/bookings/{id}`        | GET    | **Update** | **Kritis** |
 | `/api/gateway/payments/methods`      | GET    | **Baru**   | Tinggi    |
-| `/api/gateway/bookings`             | GET    | **Update** | Tinggi    |
 | `/api/gateway/vouchers/validate`     | POST   | **Baru**   | Sedang    |
 
 ### Prioritas Implementasi
 
-1. **Tinggi** — Update `POST /api/gateway/bookings` untuk support hold tanpa payment + `POST /api/gateway/bookings/{id}/pay` untuk bayar. Ini inti dari flow baru.
-2. **Tinggi** — `GET /api/gateway/payments/methods` + update `GET /api/gateway/bookings` (list) dengan `holdExpiresAt`.
-3. **Sedang** — `POST /api/gateway/vouchers/validate`. Fitur voucher bisa ditunda; frontend sudah handle gracefully jika endpoint belum ada.
+1. **Kritis** — Fix `GET /api/gateway/bookings` (list) dan `GET /api/gateway/bookings/{id}` (detail):
+   - Tambahkan `origin`, `destination` (nama, kota, waktu berangkat/tiba)
+   - Tambahkan `patternName` (nama rute)
+   - Fix `totalAmount` (harus > 0, hitung dari fare × penumpang)
+   - Tambahkan `holdExpiresAt` untuk booking berstatus `held`
+   - Tambahkan `passengers` array lengkap di detail
+2. **Tinggi** — Update `POST /api/gateway/bookings` untuk support hold tanpa payment + `POST /api/gateway/bookings/{id}/pay` untuk bayar.
+3. **Tinggi** — `GET /api/gateway/payments/methods`.
+4. **Sedang** — `POST /api/gateway/vouchers/validate`. Fitur voucher bisa ditunda.
 
 ### Backend Requirement: Hold Expiry Cleanup
 
@@ -364,3 +540,14 @@ Console perlu mekanisme untuk otomatis mengubah status `held` → `expired` sete
 - **Option C**: Kombinasi A + B
 
 Yang penting: kursi harus dilepas kembali ke Terminal saat hold expired, supaya bisa dipesan user lain.
+
+### Backend Requirement: Simpan Snapshot Trip Data
+
+Saat booking dibuat, Console **HARUS** menyimpan snapshot data trip berikut ke tabel booking:
+- `patternName`, `patternCode` — dari trip search / materialize
+- `origin` (stopId, name, city, departAt) — dari stop yang dipilih user
+- `destination` (stopId, name, city, arriveAt) — dari stop yang dipilih user
+- `farePerPerson` — dari trip search
+- `totalAmount` = farePerPerson × jumlah penumpang
+
+Data ini tidak boleh bergantung pada trip yang masih aktif — harus tersimpan permanen di booking, karena trip bisa berubah atau dihapus setelah tanggal keberangkatan lewat.
