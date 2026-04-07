@@ -79,7 +79,6 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
   }, [loadMore]);
 
   const selectTrip = (trip: TripSearchResult) => {
-    const tripLabel = `${trip.operatorName} · ${trip.origin?.cityName || originCity} → ${trip.destination?.cityName || destinationCity}`;
     const rawStops = getRawStops(trip);
     const stopsForNav: import('@/lib/api').TripStopInfo[] = rawStops.map(s => ({
       stopId: s.stopId || s.code,
@@ -93,17 +92,14 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
       alightingAllowed: s.alightingAllowed,
     }));
     navigate({
-      name: 'select-stops',
+      name: 'trip-detail',
       tripId: trip.tripId,
       serviceDate: trip.serviceDate,
       passengers,
-      tripLabel,
-      fare: trip.farePerPerson,
-      stops: stopsForNav,
       originCity,
       destCity: destinationCity,
-      originSeq: trip.origin?.sequence || 0,
-      destSeq: trip.destination?.sequence || 0,
+      trip,
+      rawStops: stopsForNav,
     });
   };
 

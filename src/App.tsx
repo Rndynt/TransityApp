@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext, useCallback } from 'rea
 import { store, authApi, type AppUser } from '@/lib/api';
 import HomePage from '@/pages/HomePage';
 import SearchResultsPage from '@/pages/SearchResultsPage';
+import TripDetailPage from '@/pages/TripDetailPage';
 import SelectStopsPage from '@/pages/SelectStopsPage';
 import SelectSeatsPage from '@/pages/SelectSeatsPage';
 import BookingConfirmPage from '@/pages/BookingConfirmPage';
@@ -19,6 +20,7 @@ import { cn } from '@/lib/utils';
 type Page =
   | { name: 'home' }
   | { name: 'search-results'; originCity: string; destinationCity: string; date: string; passengers: number; operatorFilter?: string | null }
+  | { name: 'trip-detail'; tripId: string; serviceDate: string; passengers: number; originCity: string; destCity: string; trip: import('@/lib/api').TripSearchResult; rawStops: import('@/lib/api').TripStopInfo[] }
   | { name: 'select-stops'; tripId: string; serviceDate: string; passengers: number; tripLabel: string; fare: number; stops?: import('@/lib/api').TripStopInfo[]; originCity: string; destCity: string; originSeq: number; destSeq: number }
   | { name: 'select-seats'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; passengers: number; tripLabel: string; fare: number }
   | { name: 'booking-confirm'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; seats: string[]; tripLabel: string; fare: number }
@@ -106,6 +108,7 @@ function PageRouter() {
   switch (page.name) {
     case 'home': return <HomePage />;
     case 'search-results': return <SearchResultsPage {...page} />;
+    case 'trip-detail': return <TripDetailPage {...page} />;
     case 'select-stops': return <SelectStopsPage {...page} />;
     case 'select-seats': return <SelectSeatsPage {...page} />;
     case 'booking-confirm': return <BookingConfirmPage {...page} />;
@@ -124,7 +127,7 @@ function BottomNav() {
   const { page, navigate } = useNav();
   const { isLoggedIn } = useAuth();
 
-  const hide = ['select-stops', 'select-seats', 'booking-confirm'].includes(page.name);
+  const hide = ['trip-detail', 'select-stops', 'select-seats', 'booking-confirm'].includes(page.name);
   if (hide) return null;
 
   const tabs = [
