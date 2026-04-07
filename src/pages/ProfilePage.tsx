@@ -159,7 +159,7 @@ export default function ProfilePage() {
       {showLogoutConfirm && (
         <>
           <div className="fixed inset-0 z-[60] bg-black/40 anim-fade" onClick={() => setShowLogoutConfirm(false)} />
-          <div className="fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-[1.5rem] p-6 anim-slide-up safe-bottom">
+          <div className="fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-[1.5rem] px-6 pt-6 anim-slide-up" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)' }}>
             <h3 className="text-[17px] font-bold text-slate-800 mb-2">Keluar dari Akun?</h3>
             <p className="text-[13px] text-slate-500 mb-5">Kamu harus login kembali untuk memesan tiket.</p>
             <div className="flex gap-3">
@@ -184,7 +184,7 @@ export default function ProfilePage() {
       {showChangePassword && (
         <>
           <div className="fixed inset-0 z-[60] bg-black/40 anim-fade" onClick={() => setShowChangePassword(false)} />
-          <div className="fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-[1.5rem] p-6 anim-slide-up safe-bottom">
+          <div className="fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-[1.5rem] px-6 pt-6 anim-slide-up" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-[17px] font-bold text-slate-800">Ubah Password</h3>
               <button onClick={() => setShowChangePassword(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100">
@@ -206,11 +206,11 @@ export default function ProfilePage() {
             {pwError && <p className="text-[13px] text-red-500 font-medium mt-3">{pwError}</p>}
             {pwSuccess && <p className="text-[13px] text-green-600 font-medium mt-3">{pwSuccess}</p>}
             <Button
-              className="w-full mt-4 h-12 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[14px] font-bold"
+              className="w-full mt-5 h-12 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[14px] font-bold"
               onClick={handleChangePassword}
-              disabled={pwLoading}
+              disabled={pwLoading || !currentPassword.trim() || !newPassword.trim()}
             >
-              {pwLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              {pwLoading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               Simpan Password
             </Button>
           </div>
@@ -220,7 +220,7 @@ export default function ProfilePage() {
       {showEditProfile && (
         <>
           <div className="fixed inset-0 z-[60] bg-black/40 anim-fade" onClick={() => setShowEditProfile(false)} />
-          <div className="fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-[1.5rem] p-6 anim-slide-up safe-bottom">
+          <div className="fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-[1.5rem] px-6 pt-6 anim-slide-up" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 24px)' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-[17px] font-bold text-slate-800">Edit Profil</h3>
               <button onClick={() => setShowEditProfile(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100">
