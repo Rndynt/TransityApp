@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useNav } from '@/App';
 import { tripsApi, type TripSearchResult } from '@/lib/api';
 import { fmtCurrency, fmtTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import OperatorLogo from '@/components/OperatorLogo';
 import OperatorBottomSheet from '@/components/OperatorBottomSheet';
+import PullToRefreshIndicator from '@/components/PullToRefreshIndicator';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { ArrowLeft, Loader2, SearchX, Clock, MapPin, ChevronDown, ChevronUp, Users, CheckCircle2, ArrowRight, SlidersHorizontal, Bus } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -38,6 +40,7 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(operatorFilter ?? null);
   const [operatorSheetOpen, setOperatorSheetOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const {
     data,
@@ -52,6 +55,14 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
       tripsApi.searchPaginated({ originCity, destinationCity, date, passengers, page: pageParam, limit: PAGE_LIMIT }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.page + 1 : undefined,
+  });
+
+  const handlePullRefresh = useCallback(async () => {
+    await queryClient.resetQueries({ queryKey: ['trips-search-infinite', originCity, destinationCity, date, passengers] });
+  }, [queryClient, originCity, destinationCity, date, passengers]);
+
+  const { containerRef, pullDistance, isRefreshing, progress, isPastThreshold } = usePullToRefresh({
+    onRefresh: handlePullRefresh,
   });
 
   const allTrips = data?.pages.flatMap((p) => p.data) ?? [];
@@ -108,7 +119,7 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
   try { dateLabel = format(parseISO(date), 'EEE, d MMM yyyy', { locale: idLocale }); } catch {}
 
   return (
-    <div className="anim-fade min-h-screen bg-slate-50">
+    <div ref={containerRef} className="anim-fade min-h-screen bg-slate-50 overflow-y-auto">
       <div className="hero-mesh px-4 pt-3 pb-4 sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <button
@@ -130,6 +141,13 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
           </div>
         </div>
       </div>
+
+      <PullToRefreshIndicator
+        pullDistance={pullDistance}
+        isRefreshing={isRefreshing}
+        progress={progress}
+        isPastThreshold={isPastThreshold}
+      />
 
       <div className="px-4 pt-4 pb-24">
         {!isLoading && allTrips.length > 0 && (
