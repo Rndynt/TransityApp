@@ -59,7 +59,7 @@ export default function MyTripsPage() {
             return (
               <button
                 key={b.id}
-                onClick={() => navigate({ name: 'booking-detail', bookingId: b.id, source: 'terminal' })}
+                onClick={() => navigate({ name: 'booking-detail', bookingId: b.id, source: 'gateway' })}
                 className={cn(
                   'w-full text-left bg-white rounded-2xl shadow-soft overflow-hidden transition-all hover:shadow-lifted active:scale-[0.98] anim-slide-up',
                   `delay-${Math.min(i + 1, 4)}`,

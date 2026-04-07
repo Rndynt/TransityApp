@@ -28,9 +28,7 @@ export default function BookingDetailPage({ bookingId, source }: Props) {
 
   const { data: booking, isLoading, error } = useQuery({
     queryKey: ['booking', bookingId, source],
-    queryFn: () => source === 'gateway'
-      ? bookingsApi.getGatewayDetail(bookingId)
-      : bookingsApi.getDetail(bookingId),
+    queryFn: () => bookingsApi.getGatewayDetail(bookingId),
   });
 
   const cancelMutation = useMutation({

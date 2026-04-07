@@ -22,11 +22,10 @@ public/        # Static assets
 TransityApp (ini)
      │
      └─ /api/* ──▶ TransityConsole (CONSOLE_URL)
-                       ├─ /api/gateway/* (trips, seatmap, bookings, materialize)
-                       └─ /api/app/*     (auth, booking list — diteruskan Console ke Terminal)
+                       └─ /api/gateway/* (auth, trips, seatmap, bookings, operators)
 ```
 
-Semua API request diarahkan ke Console. Tidak ada koneksi langsung ke Terminal.
+Semua API request diarahkan ke Console Gateway. Auth terpusat di Console — satu akun berlaku untuk semua operator.
 
 ## Environment Variables
 
@@ -50,19 +49,33 @@ Semua API request diarahkan ke Console. Tidak ada koneksi langsung ke Terminal.
 - Disimpan di `localStorage` (`t_onboarding_done`) — hanya muncul sekali
 - File: `src/pages/OnboardingPage.tsx`
 
+### Authentication (Console Gateway)
+- Login dengan email ATAU nomor telepon (`POST /api/gateway/auth/login`)
+- Registrasi customer baru (`POST /api/gateway/auth/register`) — semua field wajib (fullName, email, phone, password)
+- Get profil (`GET /api/gateway/auth/me`)
+- Update profil — nama dan/atau telepon (`PUT /api/gateway/auth/profile`)
+- Ubah password (`POST /api/gateway/auth/change-password`)
+- JWT token berlaku 30 hari, disimpan di localStorage
+
 ### Trip Search & Booking Flow
 1. HomePage → pilih kota, tanggal, operator
 2. SearchResultsPage → daftar jadwal dari semua operator
 3. SelectStopsPage → pilih titik naik/turun (filter pakai `boardingAllowed`/`alightingAllowed`)
-4. **Materialize** — trip virtual di-materialize lewat `POST /api/gateway/trips/materialize` (kirim `baseId`, `operatorSlug`, `serviceDate`)
+4. **Materialize** — trip virtual di-materialize lewat `POST /api/gateway/trips/materialize`
 5. SelectSeatsPage → pilih kursi dari seatmap
 6. BookingConfirmPage → konfirmasi & bayar
 
+### Profile
+- Info akun (nama, email, HP, tanggal bergabung)
+- Edit profil (nama & no HP) via bottom sheet
+- Ubah password via bottom sheet
+- Menu navigasi ke help/notif/about
+- Logout dengan konfirmasi
+
 ### Halaman Tambahan
-- **ProfilePage** — Profil user (info akun, menu navigasi ke help/notif/about, logout dengan konfirmasi)
-- **HelpPage** — FAQ accordion dengan search, 10 pertanyaan dalam 4 kategori, tombol hubungi kami
-- **NotificationsPage** — Daftar notifikasi (saat ini static/placeholder)
-- **AboutPage** — Info versi app, link privacy/terms/contact/website
+- **HelpPage** — FAQ accordion dengan search
+- **NotificationsPage** — Daftar notifikasi (placeholder)
+- **AboutPage** — Info versi app
 
 ### Komponen Penting
 - `OperatorBottomSheet` — filter operator (reusable, searchable)
@@ -71,28 +84,40 @@ Semua API request diarahkan ke Console. Tidak ada koneksi langsung ke Terminal.
 
 ### Navigasi
 - Tab "Akun" → ProfilePage (jika login) atau AuthPage (jika belum login)
-- AuthPage redirect ke ProfilePage jika sudah login
-- ProfilePage punya menu ke Notifikasi, Bantuan, dan Tentang Aplikasi
+- AuthPage: toggle login/register, login toggle email/no HP
+- ProfilePage: edit profil, ubah password, navigasi ke sub-pages
 
-## Endpoint Gateway
+## Gateway API Endpoints (Console)
 
-### Sudah dipakai (`/api/gateway/*`):
+### Auth (`/api/gateway/auth/*`)
+- `POST /api/gateway/auth/register` — Registrasi (fullName, email, phone, password)
+- `POST /api/gateway/auth/login` — Login (email atau phone + password)
+- `GET /api/gateway/auth/me` — Profil user (perlu Bearer token)
+- `PUT /api/gateway/auth/profile` — Update profil (fullName, phone)
+- `POST /api/gateway/auth/change-password` — Ganti password (currentPassword, newPassword)
+
+### Trips (`/api/gateway/trips/*`)
 - `GET /api/gateway/cities` — Daftar kota
-- `GET /api/gateway/trips/search` — Pencarian jadwal
-- `POST /api/gateway/trips/materialize` — Materialize trip virtual
+- `GET /api/gateway/trips/search` — Pencarian jadwal (originCity, destinationCity, date, passengers)
 - `GET /api/gateway/trips/{tripId}` — Detail trip
-- `GET /api/gateway/trips/{tripId}/seatmap` — Seatmap
+- `GET /api/gateway/trips/{tripId}/seatmap` — Seatmap (originSeq, destinationSeq, serviceDate)
+- `GET /api/gateway/trips/{tripId}/reviews` — Ulasan trip
+- `POST /api/gateway/trips/materialize` — Materialize trip virtual
+
+### Operators
+- `GET /api/gateway/operators/{slug}/info` — Info branding operator
+- `GET /api/gateway/service-lines` — Daftar rute layanan
+
+### Bookings (`/api/gateway/bookings/*`)
 - `POST /api/gateway/bookings` — Buat pemesanan
 - `GET /api/gateway/bookings/{bookingId}` — Detail pesanan
-
-### Endpoint auth/booking (`/api/app/*`, diteruskan Console ke Terminal):
-- `POST /api/app/auth/register` / `login` / `GET /api/app/auth/me`
-- `GET /api/app/bookings` — Daftar pesanan
-- `POST /api/app/bookings/{id}/cancel` — Batalkan pesanan
+- `GET /api/gateway/bookings` — Daftar pesanan
+- `POST /api/gateway/bookings/{id}/cancel` — Batalkan pesanan
 
 ## Data Model Notes
 
+- User model: `{ id, fullName, email, phone, avatarUrl, createdAt }` (dari Console)
 - Semua trip dari search bisa virtual (`isVirtual: true`) — perlu materialize sebelum seatmap
-- Raw stops tersedia di `raw.stops` pada search response — langsung digunakan tanpa fetch detail
-- Stop filtering pakai `boardingAllowed`/`alightingAllowed` flags dari raw stops
-- `operatorSlug` dikirim saat materialize (wajib di production Console)
+- Stop filtering pakai `boardingAllowed`/`alightingAllowed` flags
+- `tripId` format: `{operatorSlug}:{originalId}` — jangan diparsing, kirim apa adanya
+- Booking status: held → confirmed → completed (atau cancelled)

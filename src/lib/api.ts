@@ -1,10 +1,9 @@
 export interface AppUser {
   id: string;
+  fullName: string;
   email: string;
-  name: string;
   phone: string | null;
-  avatar: string | null;
-  isActive: boolean;
+  avatarUrl: string | null;
   createdAt: string;
 }
 
@@ -216,18 +215,22 @@ const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body: Record<string, unknown>) =>
     request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+  put: <T>(path: string, body: Record<string, unknown>) =>
+    request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
   patch: <T>(path: string, body: Record<string, unknown>) =>
     request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
 };
 
 export const authApi = {
-  register: (data: { email: string; password: string; name: string; phone?: string }) =>
-    api.post<AuthResponse>('/api/app/auth/register', data),
-  login: (data: { email: string; password: string }) =>
-    api.post<AuthResponse>('/api/app/auth/login', data),
-  getMe: () => api.get<AppUser>('/api/app/auth/me'),
-  updateProfile: (data: { name?: string; phone?: string }) =>
-    api.patch<AppUser>('/api/app/profile', data),
+  register: (data: { fullName: string; email: string; phone: string; password: string }) =>
+    api.post<AuthResponse>('/api/gateway/auth/register', data as unknown as Record<string, unknown>),
+  login: (data: { email?: string; phone?: string; password: string }) =>
+    api.post<AuthResponse>('/api/gateway/auth/login', data as unknown as Record<string, unknown>),
+  getMe: () => api.get<{ user: AppUser }>('/api/gateway/auth/me').then(res => res.user),
+  updateProfile: (data: { fullName?: string; phone?: string }) =>
+    api.put<{ user: AppUser }>('/api/gateway/auth/profile', data as unknown as Record<string, unknown>).then(res => res.user),
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    api.post<{ message: string }>('/api/gateway/auth/change-password', data as unknown as Record<string, unknown>),
 };
 
 export interface TripSearchPaginatedResponse {
@@ -313,27 +316,33 @@ export const tripsApi = {
     return result as TripSearchPaginatedResponse;
   },
 
-  getDetail: (tripId: string) => api.get<TripDetail>(`/api/gateway/trips/${tripId}`),
-  getSeatmap: (tripId: string, originSeq: number, destSeq: number) =>
-    api.get<SeatmapResponse>(`/api/gateway/trips/${tripId}/seatmap?originSeq=${originSeq}&destinationSeq=${destSeq}`),
-  materialize: async (tripId: string, serviceDate: string): Promise<{ tripId: string }> => {
-    const parts = tripId.split(':');
-    const operatorSlug = parts.length > 1 ? parts[0] : '';
-    const rawId = parts.length > 1 ? parts.slice(1).join(':') : parts[0];
-    const baseId = rawId.replace(/^virtual-/, '');
-    const body: Record<string, string> = { baseId, serviceDate };
-    if (operatorSlug) body.operatorSlug = operatorSlug;
-    return api.post<{ tripId: string }>('/api/gateway/trips/materialize', body);
+  getDetail: (tripId: string, serviceDate?: string) => {
+    const qs = serviceDate ? `?serviceDate=${serviceDate}` : '';
+    return api.get<TripDetail>(`/api/gateway/trips/${tripId}${qs}`);
   },
+  getSeatmap: (tripId: string, originSeq: number, destSeq: number, serviceDate?: string) => {
+    let qs = `?originSeq=${originSeq}&destinationSeq=${destSeq}`;
+    if (serviceDate) qs += `&serviceDate=${serviceDate}`;
+    return api.get<SeatmapResponse>(`/api/gateway/trips/${tripId}/seatmap${qs}`);
+  },
+  getReviews: (tripId: string) =>
+    api.get<unknown>(`/api/gateway/trips/${tripId}/reviews`),
+  materialize: async (tripId: string, serviceDate: string): Promise<{ tripId: string }> => {
+    return api.post<{ tripId: string }>('/api/gateway/trips/materialize', { tripId, serviceDate });
+  },
+  getOperatorInfo: (operatorSlug: string) =>
+    api.get<unknown>(`/api/gateway/operators/${operatorSlug}/info`),
+  getServiceLines: () =>
+    api.get<unknown>('/api/gateway/service-lines'),
 };
 
 export const bookingsApi = {
   create: (data: CreateBookingData) =>
     api.post<GatewayBookingResponse>('/api/gateway/bookings', data as unknown as Record<string, unknown>),
-  list: () => api.get<BookingListItem[]>('/api/app/bookings'),
-  getDetail: (id: string) => api.get<BookingDetail>(`/api/app/bookings/${id}`),
   getGatewayDetail: (bookingId: string) => api.get<BookingDetail>(`/api/gateway/bookings/${bookingId}`),
-  cancel: (id: string) => api.post<{ success: boolean }>(`/api/app/bookings/${id}/cancel`, {}),
+  list: () => api.get<BookingListItem[]>('/api/gateway/bookings'),
+  getDetail: (id: string) => api.get<BookingDetail>(`/api/gateway/bookings/${id}`),
+  cancel: (id: string) => api.post<{ success: boolean }>(`/api/gateway/bookings/${id}/cancel`, {}),
 };
 
 export const store = {
@@ -344,7 +353,15 @@ export const store = {
   getUser(): AppUser | null {
     try {
       const raw = localStorage.getItem('transity_user');
-      return raw ? JSON.parse(raw) : null;
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed.name && !parsed.fullName) {
+        parsed.fullName = parsed.name;
+      }
+      if (parsed.avatar !== undefined && parsed.avatarUrl === undefined) {
+        parsed.avatarUrl = parsed.avatar;
+      }
+      return parsed;
     } catch { return null; }
   },
   getToken,

@@ -86,7 +86,7 @@ export default function HomePage() {
           </div>
           <p className="text-teal-200/90 text-[15px] leading-snug max-w-[260px]">
             {user
-              ? <>Hai <span className="font-semibold text-white">{user.name.split(' ')[0]}</span>, mau ke mana hari ini?</>
+              ? <>Hai <span className="font-semibold text-white">{user.fullName.split(' ')[0]}</span>, mau ke mana hari ini?</>
               : 'Temukan & pesan tiket bus favoritmu dalam hitungan detik.'
             }
           </p>

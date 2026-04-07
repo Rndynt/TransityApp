@@ -16,9 +16,10 @@ export default function AuthPage({ returnTo }: Props) {
   const { isLoggedIn, login } = useAuth();
   const { navigate } = useNav();
   const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,11 +33,16 @@ export default function AuthPage({ returnTo }: Props) {
     setLoading(true);
     try {
       if (mode === 'login') {
-        const res = await authApi.login({ email, password });
+        const loginData = loginMethod === 'email'
+          ? { email, password }
+          : { phone, password };
+        const res = await authApi.login(loginData);
         login(res.user, res.token);
       } else {
-        if (!name.trim()) { setError('Nama wajib diisi'); setLoading(false); return; }
-        const res = await authApi.register({ email, password, name, phone: phone || undefined });
+        if (!fullName.trim()) { setError('Nama wajib diisi'); setLoading(false); return; }
+        if (!phone.trim()) { setError('No. HP wajib diisi'); setLoading(false); return; }
+        if (!email.trim()) { setError('Email wajib diisi'); setLoading(false); return; }
+        const res = await authApi.register({ fullName: fullName.trim(), email, phone, password });
         login(res.user, res.token);
       }
       if (returnTo) navigate(returnTo);
@@ -47,6 +53,10 @@ export default function AuthPage({ returnTo }: Props) {
       setLoading(false);
     }
   };
+
+  const canSubmit = mode === 'login'
+    ? (loginMethod === 'email' ? !!email : !!phone) && !!password
+    : !!email && !!password && !!fullName && !!phone;
 
   return (
     <div className="anim-fade px-4 pt-16 pb-28">
@@ -78,13 +88,41 @@ export default function AuthPage({ returnTo }: Props) {
 
         <div className="space-y-3">
           {mode === 'register' && (
-            <InputField icon={User} label="Nama" value={name} onChange={setName} placeholder="Nama lengkap" testId="input-name" />
+            <InputField icon={User} label="Nama Lengkap *" value={fullName} onChange={setFullName} placeholder="Nama lengkap" testId="input-name" />
           )}
-          <InputField icon={Mail} label="Email" type="email" value={email} onChange={setEmail} placeholder="nama@email.com" testId="input-email" />
-          <InputField icon={Lock} label="Password" type="password" value={password} onChange={setPassword} placeholder="Kata sandi" testId="input-password" />
+
+          {mode === 'login' && (
+            <div className="flex bg-slate-50 rounded-lg p-0.5 mb-1">
+              {(['email', 'phone'] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setLoginMethod(m)}
+                  className={cn(
+                    'flex-1 py-2 rounded-md text-[12px] font-semibold transition-all',
+                    loginMethod === m ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-400',
+                  )}
+                >
+                  {m === 'email' ? 'Email' : 'No. HP'}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {mode === 'login' && loginMethod === 'email' && (
+            <InputField icon={Mail} label="Email" type="email" value={email} onChange={setEmail} placeholder="nama@email.com" testId="input-email" />
+          )}
+          {mode === 'login' && loginMethod === 'phone' && (
+            <InputField icon={Phone} label="No. HP" type="tel" value={phone} onChange={setPhone} placeholder="08xxxxxxxxxx" testId="input-phone" />
+          )}
+
           {mode === 'register' && (
-            <InputField icon={Phone} label="No. HP (opsional)" type="tel" value={phone} onChange={setPhone} placeholder="08xxxxxxxxxx" testId="input-phone" />
+            <>
+              <InputField icon={Mail} label="Email *" type="email" value={email} onChange={setEmail} placeholder="nama@email.com" testId="input-email" />
+              <InputField icon={Phone} label="No. HP *" type="tel" value={phone} onChange={setPhone} placeholder="08xxxxxxxxxx" testId="input-phone" />
+            </>
           )}
+
+          <InputField icon={Lock} label="Password" type="password" value={password} onChange={setPassword} placeholder="Kata sandi" testId="input-password" />
         </div>
 
         {error && (
@@ -94,7 +132,7 @@ export default function AuthPage({ returnTo }: Props) {
         <Button
           className="w-full mt-5 h-[52px] rounded-2xl bg-teal-900 hover:bg-teal-950 text-[15px] font-bold shadow-lg shadow-teal-900/15 transition-all active:scale-[0.98]"
           onClick={submit}
-          disabled={loading || !email || !password}
+          disabled={loading || !canSubmit}
           data-testid="button-submit"
         >
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}

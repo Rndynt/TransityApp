@@ -26,7 +26,7 @@ export default function BookingConfirmPage({ tripId, serviceDate, originStopId, 
   const [passengers, setPassengers] = useState(
     seats.map((s, i) => ({
       seatNo: s,
-      fullName: i === 0 ? (user?.name || '') : '',
+      fullName: i === 0 ? (user?.fullName || '') : '',
       phone: i === 0 ? (user?.phone || '') : '',
     })),
   );
