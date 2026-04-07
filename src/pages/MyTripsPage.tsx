@@ -3,7 +3,7 @@ import { useNav, useAuth } from '@/App';
 import { bookingsApi, type BookingListItem } from '@/lib/api';
 import { fmtCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Ticket, ChevronRight, LogIn } from 'lucide-react';
+import { Ticket, ChevronRight, LogIn, CalendarDays } from 'lucide-react';
 import { BookingCardSkeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { format, parseISO } from 'date-fns';
@@ -28,23 +28,39 @@ export default function MyTripsPage() {
     enabled: !!user,
   });
 
+  const activeCount = bookings?.filter(b => b.status === 'confirmed' || b.status === 'held').length ?? 0;
+
   return (
-    <div className="anim-fade">
-      <div className="px-5 pt-14 pb-4">
-        <h1 className="font-display font-bold text-[22px] text-slate-800">Pesanan Saya</h1>
-        <p className="text-[13px] text-slate-400 mt-0.5">Riwayat dan tiket aktif Anda</p>
+    <div className="anim-fade min-h-screen bg-slate-50">
+      <div className="hero-mesh px-4 pt-3 pb-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-display font-bold text-[20px] text-white">Pesanan Saya</h1>
+            <p className="text-teal-300/80 text-[12px] mt-0.5 font-medium">
+              {isLoggedIn
+                ? (isLoading ? 'Memuat pesanan...' : `${activeCount > 0 ? `${activeCount} tiket aktif` : 'Riwayat dan tiket aktif Anda'}`)
+                : 'Masuk untuk melihat pesanan'
+              }
+            </p>
+          </div>
+          {isLoggedIn && bookings && bookings.length > 0 && (
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+              <CalendarDays className="w-5 h-5 text-teal-200" />
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="px-4 pb-28">
+      <div className="px-4 pt-4 pb-28">
         {!isLoggedIn && (
-          <div className="text-center py-16 anim-fade">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-teal-50 flex items-center justify-center">
-              <LogIn className="w-8 h-8 text-teal-400" />
+          <div className="text-center py-12 anim-fade">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white shadow-soft flex items-center justify-center">
+              <LogIn className="w-8 h-8 text-teal-500" />
             </div>
-            <p className="font-semibold text-slate-700 mb-1">Masuk untuk melihat pesanan</p>
-            <p className="text-[13px] text-slate-400 mb-5 max-w-[260px] mx-auto">Login ke akunmu untuk melihat riwayat dan tiket aktif</p>
+            <p className="font-bold text-[16px] text-slate-700 mb-1">Masuk untuk melihat pesanan</p>
+            <p className="text-[13px] text-slate-400 mb-6 max-w-[260px] mx-auto leading-relaxed">Login ke akunmu untuk melihat riwayat perjalanan dan tiket aktif</p>
             <Button
-              className="h-11 px-8 rounded-xl bg-teal-900 hover:bg-teal-950 text-[14px] font-bold"
+              className="h-12 px-10 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[14px] font-bold shadow-lg shadow-teal-900/15"
               onClick={() => navigate({ name: 'auth', returnTo: { name: 'my-trips' } })}
             >
               Masuk / Daftar
@@ -61,12 +77,18 @@ export default function MyTripsPage() {
         )}
 
         {isLoggedIn && !isLoading && bookings && bookings.length === 0 && (
-          <div className="text-center py-20">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-100 flex items-center justify-center">
+          <div className="text-center py-14 anim-fade">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white shadow-soft flex items-center justify-center">
               <Ticket className="w-8 h-8 text-slate-300" />
             </div>
-            <p className="font-semibold text-slate-700">Belum ada pesanan</p>
-            <p className="text-[13px] text-slate-400 mt-1">Yuk pesan tiket pertamamu!</p>
+            <p className="font-bold text-[16px] text-slate-700 mb-1">Belum ada pesanan</p>
+            <p className="text-[13px] text-slate-400 mt-1 mb-6">Yuk pesan tiket shuttle pertamamu!</p>
+            <Button
+              className="h-12 px-10 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[14px] font-bold shadow-lg shadow-teal-900/15"
+              onClick={() => navigate({ name: 'home' })}
+            >
+              Cari Perjalanan
+            </Button>
           </div>
         )}
 
