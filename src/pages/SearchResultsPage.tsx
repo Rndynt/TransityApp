@@ -36,16 +36,14 @@ interface Props {
   operatorFilter?: string | null;
 }
 
-function generateDateRange(baseDate: string, days: number): Date[] {
+function generateDateRange(originalDate: string, days: number): Date[] {
+  const original = parseISO(originalDate);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const start = original < today ? today : original;
   const dates: Date[] = [];
   for (let i = 0; i < days; i++) {
-    dates.push(addDays(today, i));
-  }
-  const selected = parseISO(baseDate);
-  if (selected < today) {
-    dates.unshift(selected);
+    dates.push(addDays(start, i));
   }
   return dates;
 }
@@ -56,15 +54,16 @@ function getDateChipLabel(d: Date): string {
   return format(d, 'EEE', { locale: idLocale });
 }
 
-function DateStrip({ currentDate, onChangeDate }: {
+function DateStrip({ currentDate, originalDate, onChangeDate }: {
   currentDate: string;
+  originalDate: string;
   onChangeDate: (newDate: string) => void;
 }) {
-  const dates = generateDateRange(currentDate, 7);
+  const dates = generateDateRange(originalDate, 7);
   const selected = parseISO(currentDate);
 
   return (
-    <div className="flex gap-1.5 mt-3 -mx-4 px-4 pb-0.5 overflow-x-auto scrollbar-hide">
+    <div className="grid grid-cols-7 gap-1 mt-3 -mx-4 px-4 pb-0.5">
       {dates.map((d) => {
         const iso = format(d, 'yyyy-MM-dd');
         const isActive = isSameDay(d, selected);
@@ -73,7 +72,7 @@ function DateStrip({ currentDate, onChangeDate }: {
             key={iso}
             onClick={() => { if (!isActive) onChangeDate(iso); }}
             className={cn(
-              'flex flex-col items-center min-w-[52px] px-2 py-1.5 rounded-xl text-center transition-all shrink-0 active:scale-[0.95]',
+              'flex flex-col items-center py-2 rounded-xl text-center transition-all active:scale-[0.95]',
               isActive
                 ? 'bg-white/20 ring-1 ring-white/30'
                 : 'bg-white/5 hover:bg-white/10',
@@ -82,7 +81,7 @@ function DateStrip({ currentDate, onChangeDate }: {
             <span className={cn('text-[10px] font-semibold leading-tight', isActive ? 'text-white' : 'text-teal-300/60')}>
               {getDateChipLabel(d)}
             </span>
-            <span className={cn('text-[15px] font-extrabold font-display leading-tight', isActive ? 'text-white' : 'text-teal-200/80')}>
+            <span className={cn('text-[17px] font-extrabold font-display leading-snug', isActive ? 'text-white' : 'text-teal-200/80')}>
               {format(d, 'd')}
             </span>
             <span className={cn('text-[9px] font-semibold uppercase tracking-wider leading-tight', isActive ? 'text-teal-200' : 'text-teal-300/50')}>
@@ -194,6 +193,7 @@ export default function SearchResultsPage({ originCity, destinationCity, date, p
       >
         <DateStrip
           currentDate={activeDate}
+          originalDate={date}
           onChangeDate={handleDateChange}
         />
       </PageHeader>
