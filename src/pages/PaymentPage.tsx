@@ -101,6 +101,7 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
   const [voucherError, setVoucherError] = useState('');
   const [voucherLoading, setVoucherLoading] = useState(false);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const isHeldBooking = !!bookingId;
   const countdown = useCountdown(holdExpiresAt);
@@ -128,33 +129,48 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
 
   const createMutation = useMutation({
     mutationFn: (data: CreateBookingData) => bookingsApi.create(data),
+    onMutate: () => setSubmitting(true),
     onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.bookingId, source: 'gateway' }),
     onError: (err: any) => {
+      if (err?.code === 'TERMINAL_UNAVAILABLE') {
+        setError('Koneksi ke operator timeout. Pesanan mungkin sudah terproses — cek halaman Pesanan Saya. Jangan klik ulang untuk menghindari duplikasi.');
+        return;
+      }
       if (err?.code === 'TERMINAL_ERROR') {
         setError('Gagal membuat pesanan. Sistem operator sedang bermasalah, silakan coba lagi nanti.');
+        setSubmitting(false);
         return;
       }
       setError(err?.message || 'Terjadi kesalahan');
+      setSubmitting(false);
     },
   });
 
   const payMutation = useMutation({
     mutationFn: (data: PayBookingData) => bookingsApi.pay(bookingId!, data),
+    onMutate: () => setSubmitting(true),
     onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.bookingId || bookingId!, source: 'gateway' }),
     onError: (err: any) => {
       if (err?.code === 'HOLD_EXPIRED') {
         setError('Waktu pemesanan telah habis. Silakan ulangi pemesanan.');
+        setSubmitting(false);
+        return;
+      }
+      if (err?.code === 'TERMINAL_UNAVAILABLE') {
+        setError('Koneksi ke operator timeout. Pembayaran mungkin sudah terproses — cek halaman Pesanan Saya.');
         return;
       }
       if (err?.code === 'TERMINAL_ERROR') {
         setError('Gagal memproses pembayaran. Sistem operator sedang bermasalah, silakan coba lagi nanti.');
+        setSubmitting(false);
         return;
       }
       setError(err?.message || 'Terjadi kesalahan saat memproses pembayaran');
+      setSubmitting(false);
     },
   });
 
-  const isPending = createMutation.isPending || payMutation.isPending;
+  const isPending = createMutation.isPending || payMutation.isPending || submitting;
 
   const handleApplyVoucher = async () => {
     if (!voucherCode.trim()) return;
@@ -410,8 +426,17 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
         </div>
 
         {error && (
-          <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200/60 rounded-2xl text-[13px] text-red-600 font-medium anim-scale">
-            {error}
+          <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200/60 rounded-2xl anim-scale">
+            <p className="text-[13px] text-red-600 font-medium">{error}</p>
+            {submitting && (
+              <Button
+                variant="outline"
+                className="mt-3 w-full h-10 rounded-xl border-teal-300 text-teal-700 hover:bg-teal-50 text-[13px] font-bold"
+                onClick={() => navigate({ name: 'my-trips' })}
+              >
+                Cek Pesanan Saya
+              </Button>
+            )}
           </div>
         )}
       </div>
