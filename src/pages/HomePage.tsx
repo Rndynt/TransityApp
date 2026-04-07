@@ -37,9 +37,10 @@ export default function HomePage() {
   const [origin, setOriginRaw] = useState(() => sessionStorage.getItem('t_origin') || '');
   const [destination, setDestinationRaw] = useState(() => sessionStorage.getItem('t_dest') || '');
   const [date, setDateRaw] = useState(() => {
+    const today = new Date().toISOString().split('T')[0];
     const stored = sessionStorage.getItem('t_date');
-    if (stored && /^\d{4}-\d{2}-\d{2}$/.test(stored)) return stored;
-    return new Date().toISOString().split('T')[0];
+    if (stored && /^\d{4}-\d{2}-\d{2}$/.test(stored) && stored >= today) return stored;
+    return today;
   });
   const [passengers, setPassengersRaw] = useState(() => {
     const n = parseInt(sessionStorage.getItem('t_pax') || '1', 10);
