@@ -4,7 +4,7 @@ import { useNav } from '@/App';
 import { tripsApi, type TripStopInfo } from '@/lib/api';
 import { fmtTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CircleDot, Flag, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, CircleDot, MapPin, Check, Loader2, ChevronRight, Clock, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -116,7 +116,7 @@ export default function SelectStopsPage({ tripId, serviceDate, passengers, tripL
   if (detailLoading) {
     return (
       <div className="anim-fade min-h-screen bg-slate-50">
-        <div className="bg-teal-900 px-4 pt-3 pb-4">
+        <div className="bg-gradient-to-b from-teal-900 to-teal-800 px-4 pt-3 pb-5">
           <div className="flex items-center gap-3">
             <button onClick={goBack} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10">
               <ArrowLeft className="w-5 h-5 text-white" />
@@ -134,73 +134,101 @@ export default function SelectStopsPage({ tripId, serviceDate, passengers, tripL
 
   return (
     <div className="anim-fade min-h-screen bg-slate-50">
-      <div className="bg-teal-900 px-4 pt-3 pb-4">
+      <div className="bg-gradient-to-b from-teal-900 to-teal-800 px-4 pt-3 pb-5">
         <div className="flex items-center gap-3">
           <button onClick={goBack} className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors" data-testid="button-back">
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
           <div className="flex-1 min-w-0">
-            <p className="text-white font-semibold text-[15px]">Pilih Titik Naik & Turun</p>
+            <p className="text-white font-bold text-[16px]">Pilih Titik Naik & Turun</p>
             <p className="text-teal-300 text-[12px] mt-0.5 truncate">{tripLabel}</p>
           </div>
         </div>
       </div>
 
-      <div className="px-4 pt-4 pb-32">
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={() => setMode('pickup')}
-            className={cn(
-              'flex-1 py-2.5 rounded-xl text-[13px] font-bold transition-all',
-              mode === 'pickup'
-                ? 'bg-teal-900 text-white shadow-md'
-                : 'bg-white text-slate-500 border border-slate-200',
-            )}
-            data-testid="tab-pickup"
-          >
-            <CircleDot className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
-            Titik Naik
-            {pickupStop && <span className="ml-1 opacity-70">✓</span>}
-          </button>
-          <button
-            onClick={() => setMode('drop')}
-            className={cn(
-              'flex-1 py-2.5 rounded-xl text-[13px] font-bold transition-all',
-              mode === 'drop'
-                ? 'bg-coral-500 text-white shadow-md'
-                : 'bg-white text-slate-500 border border-slate-200',
-            )}
-            data-testid="tab-drop"
-          >
-            <Flag className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5" />
-            Titik Turun
-            {dropStop && <span className="ml-1 opacity-70">✓</span>}
-          </button>
+      <div className="px-4 -mt-2 pb-36">
+        <div className="bg-white rounded-2xl shadow-soft p-1.5 mb-4">
+          <div className="flex gap-1">
+            <button
+              onClick={() => setMode('pickup')}
+              className={cn(
+                'flex-1 py-2.5 rounded-xl text-[13px] font-bold transition-all flex items-center justify-center gap-1.5',
+                mode === 'pickup'
+                  ? 'bg-teal-900 text-white shadow-md'
+                  : 'bg-transparent text-slate-400 hover:text-slate-600',
+              )}
+              data-testid="tab-pickup"
+            >
+              <CircleDot className="w-3.5 h-3.5" />
+              Titik Naik
+              {pickupStop && <Check className="w-3.5 h-3.5 ml-0.5" />}
+            </button>
+            <button
+              onClick={() => setMode('drop')}
+              className={cn(
+                'flex-1 py-2.5 rounded-xl text-[13px] font-bold transition-all flex items-center justify-center gap-1.5',
+                mode === 'drop'
+                  ? 'bg-coral-500 text-white shadow-md'
+                  : 'bg-transparent text-slate-400 hover:text-slate-600',
+              )}
+              data-testid="tab-drop"
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              Titik Turun
+              {dropStop && <Check className="w-3.5 h-3.5 ml-0.5" />}
+            </button>
+          </div>
         </div>
 
-        {pickupStop && dropStop && (
-          <div className="bg-teal-50 border border-teal-200/60 rounded-2xl p-3.5 mb-4 anim-fade">
-            <div className="flex items-center gap-3">
+        {(pickupStop || dropStop) && (
+          <div className="bg-white rounded-2xl shadow-soft p-4 mb-4 anim-fade">
+            <div className="flex items-stretch gap-3">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 text-[10px] text-teal-600 font-bold uppercase tracking-wider mb-0.5">
-                  <CircleDot className="w-3 h-3" /> Naik
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="w-2 h-2 rounded-full bg-teal-500" />
+                  <span className="text-[10px] text-teal-600 font-bold uppercase tracking-wider">Naik</span>
                 </div>
-                <p className="font-bold text-[14px] text-teal-900">{pickupStop.name}</p>
-                <p className="text-[12px] text-teal-700 font-medium">{fmtTime(pickupStop.departAt)}</p>
+                {pickupStop ? (
+                  <>
+                    <p className="font-bold text-[14px] text-slate-800 leading-tight">{pickupStop.name}</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Clock className="w-3 h-3 text-slate-400" />
+                      <span className="text-[12px] text-slate-500 font-medium">{fmtTime(pickupStop.departAt)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-[13px] text-slate-300 italic mt-0.5">Belum dipilih</p>
+                )}
               </div>
-              <div className="text-teal-300 text-lg font-bold">→</div>
-              <div className="flex-1 min-w-0 text-right">
-                <div className="flex items-center justify-end gap-1.5 text-[10px] text-coral-600 font-bold uppercase tracking-wider mb-0.5">
-                  <Flag className="w-3 h-3" /> Turun
+
+              <div className="flex items-center">
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                  <ArrowRight className="w-4 h-4 text-slate-400" />
                 </div>
-                <p className="font-bold text-[14px] text-teal-900">{dropStop.name}</p>
-                <p className="text-[12px] text-teal-700 font-medium">{fmtTime(dropStop.arriveAt)}</p>
+              </div>
+
+              <div className="flex-1 min-w-0 text-right">
+                <div className="flex items-center justify-end gap-1.5 mb-1">
+                  <div className="w-2 h-2 rounded-full bg-coral-500" />
+                  <span className="text-[10px] text-coral-600 font-bold uppercase tracking-wider">Turun</span>
+                </div>
+                {dropStop ? (
+                  <>
+                    <p className="font-bold text-[14px] text-slate-800 leading-tight">{dropStop.name}</p>
+                    <div className="flex items-center justify-end gap-1 mt-1">
+                      <Clock className="w-3 h-3 text-slate-400" />
+                      <span className="text-[12px] text-slate-500 font-medium">{fmtTime(dropStop.arriveAt)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-[13px] text-slate-300 italic mt-0.5">Belum dipilih</p>
+                )}
               </div>
             </div>
           </div>
         )}
 
-        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">
           {mode === 'pickup'
             ? `Pilih titik naik (${pickupStops.length} halte)`
             : `Pilih titik turun (${dropStops.length} halte)`
@@ -208,13 +236,14 @@ export default function SelectStopsPage({ tripId, serviceDate, passengers, tripL
         </p>
 
         {activeStops.length === 0 && (
-          <div className="text-center py-12 text-[13px] text-slate-400">
-            Tidak ada halte tersedia untuk kota ini
+          <div className="text-center py-12">
+            <MapPin className="w-8 h-8 text-slate-200 mx-auto mb-2" />
+            <p className="text-[13px] text-slate-400">Tidak ada halte tersedia untuk kota ini</p>
           </div>
         )}
 
-        <div className="grid gap-2.5">
-          {activeStops.map((stop) => {
+        <div className="space-y-2">
+          {activeStops.map((stop, idx) => {
             const isPickup = pickupStopId === stop.stopId;
             const isDrop = dropStopId === stop.stopId;
             const isSelected = (mode === 'pickup' && isPickup) || (mode === 'drop' && isDrop);
@@ -228,53 +257,61 @@ export default function SelectStopsPage({ tripId, serviceDate, passengers, tripL
                   else handleDrop(stop);
                 }}
                 className={cn(
-                  'w-full rounded-2xl p-4 text-left transition-all duration-200 border-2',
-                  isSelected && mode === 'pickup' && 'bg-teal-50 border-teal-500 shadow-md shadow-teal-500/10',
-                  isSelected && mode === 'drop' && 'bg-coral-50 border-coral-400 shadow-md shadow-coral-400/10',
-                  !isSelected && 'bg-white border-slate-100 hover:border-slate-300 hover:shadow-sm active:scale-[0.98]',
+                  'w-full rounded-2xl p-4 text-left transition-all duration-200',
+                  isSelected && mode === 'pickup' && 'bg-teal-50 ring-2 ring-teal-500 shadow-md shadow-teal-500/10',
+                  isSelected && mode === 'drop' && 'bg-coral-50 ring-2 ring-coral-400 shadow-md shadow-coral-400/10',
+                  !isSelected && 'bg-white shadow-soft hover:shadow-md active:scale-[0.98]',
                 )}
                 data-testid={`stop-${stop.code}`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3.5">
                   <div className={cn(
-                    'w-11 h-11 rounded-xl flex items-center justify-center shrink-0',
+                    'w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors',
                     isSelected && mode === 'pickup' && 'bg-teal-600',
                     isSelected && mode === 'drop' && 'bg-coral-500',
                     !isSelected && 'bg-slate-100',
                   )}>
                     {isSelected ? (
                       <Check className="w-5 h-5 text-white" />
+                    ) : mode === 'pickup' ? (
+                      <CircleDot className="w-[18px] h-[18px] text-slate-400" />
                     ) : (
-                      <span className="text-[14px] font-bold text-slate-400">{stop.code}</span>
+                      <MapPin className="w-[18px] h-[18px] text-slate-400" />
                     )}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <p className={cn(
-                      'text-[15px] truncate',
+                      'text-[15px] truncate leading-tight',
                       isSelected ? 'font-bold text-slate-900' : 'font-semibold text-slate-700',
                     )}>
                       {stop.name}
                     </p>
-                    {isSelected && mode === 'pickup' && <span className="text-[11px] font-bold text-teal-600">Titik naik dipilih</span>}
-                    {isSelected && mode === 'drop' && <span className="text-[11px] font-bold text-coral-600">Titik turun dipilih</span>}
-                    {!isSelected && (
-                      <span className="text-[11px] text-slate-400">Halte {stop.sequence}</span>
+                    {isSelected && mode === 'pickup' && (
+                      <span className="text-[11px] font-semibold text-teal-600 mt-0.5 block">Titik naik dipilih</span>
+                    )}
+                    {isSelected && mode === 'drop' && (
+                      <span className="text-[11px] font-semibold text-coral-600 mt-0.5 block">Titik turun dipilih</span>
+                    )}
+                    {!isSelected && stop.city && (
+                      <span className="text-[11px] text-slate-400 mt-0.5 block">{stop.city}</span>
                     )}
                   </div>
 
-                  <div className={cn(
-                    'shrink-0 px-3 py-1.5 rounded-lg',
-                    isSelected && mode === 'pickup' && 'bg-teal-600',
-                    isSelected && mode === 'drop' && 'bg-coral-500',
-                    !isSelected && 'bg-slate-50',
-                  )}>
-                    <span className={cn(
-                      'text-[16px] font-bold tabular-nums',
-                      isSelected ? 'text-white' : 'text-slate-700',
-                    )}>
-                      {fmtTime(time)}
-                    </span>
+                  <div className="shrink-0 flex items-center gap-2">
+                    <div className="text-right">
+                      <span className={cn(
+                        'text-[16px] font-bold tabular-nums block leading-tight',
+                        isSelected && mode === 'pickup' && 'text-teal-700',
+                        isSelected && mode === 'drop' && 'text-coral-600',
+                        !isSelected && 'text-slate-700',
+                      )}>
+                        {fmtTime(time)}
+                      </span>
+                    </div>
+                    {!isSelected && (
+                      <ChevronRight className="w-4 h-4 text-slate-300" />
+                    )}
                   </div>
                 </div>
               </button>
@@ -283,13 +320,13 @@ export default function SelectStopsPage({ tripId, serviceDate, passengers, tripL
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 safe-bottom z-40">
-        <div className="px-4 py-3">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-slate-100 safe-bottom z-40">
+        <div className="max-w-lg mx-auto px-4 py-3">
           {materializeMut.isError && (
-            <p className="text-red-500 text-xs text-center mb-2">Gagal memproses jadwal. Silakan coba lagi.</p>
+            <p className="text-red-500 text-[12px] text-center mb-2 font-medium">Gagal memproses jadwal. Silakan coba lagi.</p>
           )}
           <Button
-            className="w-full h-12 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[14px] font-bold shadow-lg shadow-teal-900/15 transition-all active:scale-[0.97]"
+            className="w-full h-[52px] rounded-2xl bg-teal-900 hover:bg-teal-950 text-[15px] font-bold shadow-lg shadow-teal-900/15 transition-all active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none"
             disabled={!canProceed || materializeMut.isPending}
             onClick={proceed}
             data-testid="button-continue-stops"
@@ -297,8 +334,13 @@ export default function SelectStopsPage({ tripId, serviceDate, passengers, tripL
             {materializeMut.isPending ? (
               <><Loader2 className="w-4 h-4 animate-spin mr-2" />Memproses jadwal...</>
             ) : !canProceed
-              ? (pickupStopId === null ? 'Pilih titik naik dulu' : 'Pilih titik turun')
-              : 'Lanjut Pilih Kursi'
+              ? (pickupStopId === null ? 'Pilih titik naik dulu' : 'Pilih titik turun dulu')
+              : (
+                <>
+                  Lanjut Pilih Kursi
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </>
+              )
             }
           </Button>
         </div>
