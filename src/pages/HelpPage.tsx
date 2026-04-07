@@ -108,7 +108,7 @@ export default function HelpPage() {
         </div>
       </div>
 
-      <div className="px-4 -mt-2">
+      <div className="px-4 pt-2">
         {categories.map(cat => (
           <div key={cat} className="mb-4">
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">{cat}</p>

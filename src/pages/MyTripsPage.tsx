@@ -3,8 +3,9 @@ import { useNav, useAuth } from '@/App';
 import { bookingsApi, type BookingListItem } from '@/lib/api';
 import { fmtCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Ticket, ChevronRight } from 'lucide-react';
+import { Ticket, ChevronRight, LogIn } from 'lucide-react';
 import { BookingCardSkeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -19,7 +20,7 @@ const STATUS_CFG: Record<string, { label: string; variant: 'default' | 'success'
 
 export default function MyTripsPage() {
   const { navigate } = useNav();
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth();
 
   const { data: bookings, isLoading } = useQuery({
     queryKey: ['bookings'],
@@ -35,7 +36,23 @@ export default function MyTripsPage() {
       </div>
 
       <div className="px-4 pb-28">
-        {isLoading && (
+        {!isLoggedIn && (
+          <div className="text-center py-16 anim-fade">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-teal-50 flex items-center justify-center">
+              <LogIn className="w-8 h-8 text-teal-400" />
+            </div>
+            <p className="font-semibold text-slate-700 mb-1">Masuk untuk melihat pesanan</p>
+            <p className="text-[13px] text-slate-400 mb-5 max-w-[260px] mx-auto">Login ke akunmu untuk melihat riwayat dan tiket aktif</p>
+            <Button
+              className="h-11 px-8 rounded-xl bg-teal-900 hover:bg-teal-950 text-[14px] font-bold"
+              onClick={() => navigate({ name: 'auth', returnTo: { name: 'my-trips' } })}
+            >
+              Masuk / Daftar
+            </Button>
+          </div>
+        )}
+
+        {isLoggedIn && isLoading && (
           <div className="space-y-3 anim-fade">
             {Array.from({ length: 3 }).map((_, i) => (
               <BookingCardSkeleton key={i} />
@@ -43,7 +60,7 @@ export default function MyTripsPage() {
           </div>
         )}
 
-        {bookings && bookings.length === 0 && (
+        {isLoggedIn && !isLoading && bookings && bookings.length === 0 && (
           <div className="text-center py-20">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-100 flex items-center justify-center">
               <Ticket className="w-8 h-8 text-slate-300" />
