@@ -67,13 +67,15 @@ Semua API request diarahkan ke Console Gateway. Auth terpusat di Console — sat
 7. PaymentPage → countdown timer `holdExpiresAt`, pilih metode pembayaran, input voucher/promo → klik "Bayar" → `POST /api/gateway/bookings/{id}/pay`
 8. BookingDetailPage → detail pesanan setelah berhasil dibayar
 
-### Payment & Hold Flow
-- Saat klik "Pilih Pembayaran", booking langsung dibuat tanpa `paymentMethod` → status `held` + `holdExpiresAt`
-- Kursi sudah ter-reserve di Terminal sehingga tidak bisa diambil orang lain
-- PaymentPage menampilkan countdown timer dari `holdExpiresAt`
-- Jika waktu habis: tombol bayar disabled, user diarahkan kembali
+### Payment & Hold Flow (Dual-mode)
+- PaymentPage mendukung 2 mode:
+  - **Mode langsung** (Console belum support hold): booking dibuat di PaymentPage dengan `paymentMethod` via `POST /api/gateway/bookings`
+  - **Mode hold** (Console sudah support hold): booking dibuat held di BookingConfirmPage, bayar via `POST /api/gateway/bookings/{id}/pay`
+- Saat ini menggunakan **mode langsung** karena Console masih wajibkan `paymentMethod`
+- PaymentPage props: `bookingId?` + `holdExpiresAt?` — jika ada, pakai mode hold; jika tidak, pakai mode langsung
+- Jika mode hold: countdown timer dari `holdExpiresAt`, tombol bayar disabled jika waktu habis
 - Pesanan `held` muncul di "Pesanan Saya" (MyTripsPage) dengan countdown timer
-- Pembayaran via `POST /api/gateway/bookings/{id}/pay` dengan `paymentMethod` + opsional `voucherCode`
+- BookingDetailPage: tombol "Bayar Sekarang" untuk resume payment pesanan held
 - Metode pembayaran diambil dari `GET /api/gateway/payments/methods` — jika API belum ada, fallback ke daftar default
 - Input voucher/promo dengan validasi via `POST /api/gateway/vouchers/validate` — jika API belum ada, menampilkan error "tidak valid"
 - Console API requirements didokumentasikan di `docs/console-api-requirements.md`

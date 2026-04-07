@@ -25,7 +25,7 @@ type Page =
   | { name: 'select-stops'; tripId: string; serviceDate: string; passengers: number; tripLabel: string; fare: number; stops?: import('@/lib/api').TripStopInfo[]; originCity: string; destCity: string; originSeq: number; destSeq: number }
   | { name: 'select-seats'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; passengers: number; tripLabel: string; fare: number; originStopName?: string; destStopName?: string; originTime?: string; destTime?: string }
   | { name: 'booking-confirm'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; seats: string[]; tripLabel: string; fare: number; originStopName?: string; destStopName?: string; originTime?: string; destTime?: string }
-  | { name: 'payment'; bookingId: string; holdExpiresAt: string | null; tripLabel: string; fare: number; seats: string[]; originStopName?: string; destStopName?: string; originTime?: string; destTime?: string; passengers: Array<{ fullName: string; phone?: string; seatNo: string }> }
+  | { name: 'payment'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; seats: string[]; tripLabel: string; fare: number; originStopName?: string; destStopName?: string; originTime?: string; destTime?: string; passengers: Array<{ fullName: string; phone?: string; seatNo: string }>; bookingId?: string; holdExpiresAt?: string | null }
   | { name: 'booking-detail'; bookingId: string; source?: 'gateway' | 'terminal' }
   | { name: 'my-trips' }
   | { name: 'auth'; returnTo?: Page }

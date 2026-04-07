@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNav, useAuth } from '@/App';
-import { tripsApi, bookingsApi, type CreateBookingData } from '@/lib/api';
+import { tripsApi } from '@/lib/api';
 import { fmtCurrency, fmtTime } from '@/lib/utils';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { User, ArrowRight, Loader2 } from 'lucide-react';
+import { User, ArrowRight } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 
 interface Props {
@@ -46,45 +46,16 @@ export default function BookingConfirmPage({ tripId, serviceDate, originStopId, 
     setPassengers((prev) => prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)));
   };
 
-  const holdMutation = useMutation({
-    mutationFn: (data: CreateBookingData) => bookingsApi.create(data),
-    onSuccess: (booking) => {
-      navigate({
-        name: 'payment',
-        bookingId: booking.bookingId,
-        holdExpiresAt: booking.holdExpiresAt,
-        tripLabel,
-        fare,
-        seats,
-        originStopName,
-        destStopName,
-        originTime,
-        destTime,
-        passengers: passengers.map((p) => ({ fullName: p.fullName.trim(), phone: p.phone || undefined, seatNo: p.seatNo })),
-      });
-    },
-    onError: (err: any) => {
-      if (err?.code === 'TERMINAL_ERROR') {
-        setError('Gagal memesan kursi. Sistem operator sedang bermasalah, silakan coba lagi nanti.');
-        return;
-      }
-      setError(err?.message || 'Terjadi kesalahan saat memesan kursi');
-    },
-  });
-
   const proceedToPayment = () => {
     if (passengers.some((p) => !p.fullName.trim())) {
       setError('Nama penumpang wajib diisi');
       return;
     }
     setError('');
-    holdMutation.mutate({
-      tripId,
-      serviceDate,
-      originStopId,
-      destinationStopId: destStopId,
-      originSeq,
-      destinationSeq: destSeq,
+    navigate({
+      name: 'payment',
+      tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, seats, tripLabel, fare,
+      originStopName, destStopName, originTime, destTime,
       passengers: passengers.map((p) => ({ fullName: p.fullName.trim(), phone: p.phone || undefined, seatNo: p.seatNo })),
     });
   };
@@ -193,15 +164,10 @@ export default function BookingConfirmPage({ tripId, serviceDate, originStopId, 
             <Button
               className="h-12 px-6 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[14px] font-bold shadow-lg shadow-teal-900/15 transition-all active:scale-[0.97] gap-2"
               onClick={proceedToPayment}
-              disabled={holdMutation.isPending}
               data-testid="button-confirm"
             >
-              {holdMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <ArrowRight className="w-4 h-4" />
-              )}
-              {holdMutation.isPending ? 'Memesan kursi...' : 'Pilih Pembayaran'}
+              <ArrowRight className="w-4 h-4" />
+              Pilih Pembayaran
             </Button>
           </div>
         </div>

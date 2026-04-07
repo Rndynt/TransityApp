@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNav } from '@/App';
-import { bookingsApi, paymentsApi, type PayBookingData, type PaymentMethod } from '@/lib/api';
+import { bookingsApi, paymentsApi, type CreateBookingData, type PayBookingData, type PaymentMethod } from '@/lib/api';
 import { fmtCurrency, fmtTime } from '@/lib/utils';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -9,16 +9,22 @@ import PageHeader from '@/components/PageHeader';
 import { cn } from '@/lib/utils';
 
 interface Props {
-  bookingId: string;
-  holdExpiresAt: string | null;
+  tripId: string;
+  serviceDate: string;
+  originStopId: string;
+  destStopId: string;
+  originSeq: number;
+  destSeq: number;
+  seats: string[];
   tripLabel: string;
   fare: number;
-  seats: string[];
   originStopName?: string;
   destStopName?: string;
   originTime?: string;
   destTime?: string;
   passengers: Array<{ fullName: string; phone?: string; seatNo: string }>;
+  bookingId?: string;
+  holdExpiresAt?: string | null;
 }
 
 const FALLBACK_METHODS: PaymentMethod[] = [
@@ -53,7 +59,7 @@ function getMethodGroupLabel(type: PaymentMethod['type']) {
   }
 }
 
-function useCountdown(expiresAt: string | null) {
+function useCountdown(expiresAt: string | null | undefined) {
   const [remaining, setRemaining] = useState<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -87,7 +93,7 @@ function useCountdown(expiresAt: string | null) {
   return { expired: remaining <= 0, minutes, seconds, totalSeconds: remaining, formatted };
 }
 
-export default function PaymentPage({ bookingId, holdExpiresAt, tripLabel, fare, seats, originStopName, destStopName, originTime, destTime, passengers }: Props) {
+export default function PaymentPage({ tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, seats, tripLabel, fare, originStopName, destStopName, originTime, destTime, passengers, bookingId, holdExpiresAt }: Props) {
   const { navigate, goBack } = useNav();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [voucherCode, setVoucherCode] = useState('');
@@ -96,6 +102,7 @@ export default function PaymentPage({ bookingId, holdExpiresAt, tripLabel, fare,
   const [voucherLoading, setVoucherLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const isHeldBooking = !!bookingId;
   const countdown = useCountdown(holdExpiresAt);
 
   const { data: apiMethods } = useQuery({
@@ -119,10 +126,26 @@ export default function PaymentPage({ bookingId, holdExpiresAt, tripLabel, fare,
 
   const groupOrder: PaymentMethod['type'][] = ['qris', 'ewallet', 'virtual_account', 'bank_transfer', 'other'];
 
-  const payMutation = useMutation({
-    mutationFn: (data: PayBookingData) => bookingsApi.pay(bookingId, data),
-    onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.bookingId || bookingId, source: 'gateway' }),
+  const createMutation = useMutation({
+    mutationFn: (data: CreateBookingData) => bookingsApi.create(data),
+    onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.bookingId, source: 'gateway' }),
     onError: (err: any) => {
+      if (err?.code === 'TERMINAL_ERROR') {
+        setError('Gagal membuat pesanan. Sistem operator sedang bermasalah, silakan coba lagi nanti.');
+        return;
+      }
+      setError(err?.message || 'Terjadi kesalahan');
+    },
+  });
+
+  const payMutation = useMutation({
+    mutationFn: (data: PayBookingData) => bookingsApi.pay(bookingId!, data),
+    onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.bookingId || bookingId!, source: 'gateway' }),
+    onError: (err: any) => {
+      if (err?.code === 'HOLD_EXPIRED') {
+        setError('Waktu pemesanan telah habis. Silakan ulangi pemesanan.');
+        return;
+      }
       if (err?.code === 'TERMINAL_ERROR') {
         setError('Gagal memproses pembayaran. Sistem operator sedang bermasalah, silakan coba lagi nanti.');
         return;
@@ -131,11 +154,13 @@ export default function PaymentPage({ bookingId, holdExpiresAt, tripLabel, fare,
     },
   });
 
+  const isPending = createMutation.isPending || payMutation.isPending;
+
   const handleApplyVoucher = async () => {
     if (!voucherCode.trim()) return;
     setVoucherLoading(true);
     setVoucherError('');
-    const result = await paymentsApi.validateVoucher(voucherCode.trim(), bookingId, subtotal);
+    const result = await paymentsApi.validateVoucher(voucherCode.trim(), tripId, subtotal);
     setVoucherLoading(false);
     if (result.valid && result.discount > 0) {
       setVoucherApplied({ code: voucherCode.trim().toUpperCase(), discount: result.discount });
@@ -150,14 +175,23 @@ export default function PaymentPage({ bookingId, holdExpiresAt, tripLabel, fare,
       setError('Pilih metode pembayaran terlebih dahulu');
       return;
     }
-    if (countdown.expired) {
+    if (isHeldBooking && countdown.expired) {
       setError('Waktu pemesanan telah habis. Silakan ulangi pemesanan.');
       return;
     }
     setError('');
-    const data: PayBookingData = { paymentMethod: selectedMethod };
-    if (voucherApplied) data.voucherCode = voucherApplied.code;
-    payMutation.mutate(data);
+
+    if (isHeldBooking) {
+      const data: PayBookingData = { paymentMethod: selectedMethod };
+      if (voucherApplied) data.voucherCode = voucherApplied.code;
+      payMutation.mutate(data);
+    } else {
+      createMutation.mutate({
+        tripId, serviceDate, originStopId, destinationStopId: destStopId, originSeq, destinationSeq: destSeq,
+        passengers,
+        paymentMethod: selectedMethod,
+      });
+    }
   };
 
   const handleExpiredBack = () => {
@@ -171,7 +205,7 @@ export default function PaymentPage({ bookingId, holdExpiresAt, tripLabel, fare,
       <PageHeader title="Pembayaran" onBack={goBack} />
 
       <div className="px-4 pt-4 pb-40">
-        {holdExpiresAt && (
+        {isHeldBooking && holdExpiresAt && (
           <div className={cn(
             'flex items-center gap-3 px-4 py-3 rounded-2xl mb-3 anim-slide-up',
             countdown.expired
@@ -314,14 +348,15 @@ export default function PaymentPage({ bookingId, holdExpiresAt, tripLabel, fare,
                     {group.map((m) => {
                       const Icon = getMethodIcon(m.type);
                       const isSelected = selectedMethod === m.id;
+                      const isDisabled = isHeldBooking && countdown.expired;
                       return (
                         <button
                           key={m.id}
                           onClick={() => setSelectedMethod(m.id)}
-                          disabled={countdown.expired}
+                          disabled={isDisabled}
                           className={cn(
                             'w-full flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all text-left',
-                            countdown.expired
+                            isDisabled
                               ? 'opacity-50 cursor-not-allowed border-slate-150 bg-slate-50'
                               : isSelected
                                 ? 'border-teal-500 bg-teal-50/60 ring-1 ring-teal-500/20'
@@ -386,14 +421,14 @@ export default function PaymentPage({ bookingId, holdExpiresAt, tripLabel, fare,
           <Button
             className="w-full h-13 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[15px] font-bold shadow-lg shadow-teal-900/15 transition-all active:scale-[0.97] gap-2"
             onClick={handlePay}
-            disabled={payMutation.isPending || !selectedMethod || countdown.expired}
+            disabled={isPending || !selectedMethod || (isHeldBooking && countdown.expired)}
           >
-            {payMutation.isPending ? (
+            {isPending ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <CreditCard className="w-5 h-5" />
             )}
-            {countdown.expired ? 'Waktu Habis' : `Bayar ${fmtCurrency(total)}`}
+            {isHeldBooking && countdown.expired ? 'Waktu Habis' : `Bayar ${fmtCurrency(total)}`}
           </Button>
         </div>
       </div>

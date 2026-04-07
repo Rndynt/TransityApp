@@ -182,6 +182,12 @@ export default function BookingDetailPage({ bookingId, source }: Props) {
               className="w-full h-13 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[15px] font-bold shadow-lg shadow-teal-900/15 transition-all active:scale-[0.97] gap-2"
               onClick={() => navigate({
                 name: 'payment',
+                tripId: booking.tripId,
+                serviceDate: booking.serviceDate || '',
+                originStopId: booking.origin?.stopId || '',
+                destStopId: booking.destination?.stopId || '',
+                originSeq: 0,
+                destSeq: 0,
                 bookingId: booking.id || booking.bookingId || bookingId,
                 holdExpiresAt: booking.holdExpiresAt,
                 tripLabel: booking.patternName || booking.patternCode || 'Perjalanan',
