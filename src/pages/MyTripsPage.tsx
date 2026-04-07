@@ -71,7 +71,7 @@ export default function MyTripsPage() {
           </div>
         )}
 
-        {isLoggedIn && !isLoading && bookings && bookings.length === 0 && (
+        {isLoggedIn && !isLoading && (!bookings || bookings.length === 0) && (
           <div className="flex flex-col items-center justify-center py-16 anim-fade">
             <div className="relative mb-6">
               <div className="w-24 h-24 rounded-full bg-teal-50 flex items-center justify-center">

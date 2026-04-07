@@ -351,7 +351,12 @@ export const bookingsApi = {
   create: (data: CreateBookingData) =>
     api.post<GatewayBookingResponse>('/api/gateway/bookings', data as unknown as Record<string, unknown>),
   getGatewayDetail: (bookingId: string) => api.get<BookingDetail>(`/api/gateway/bookings/${bookingId}`),
-  list: () => api.get<BookingListItem[]>('/api/gateway/bookings'),
+  list: () => api.get<BookingListItem[] | Record<string, unknown>>('/api/gateway/bookings').then(res => {
+    if (Array.isArray(res)) return res;
+    if (res && typeof res === 'object' && Array.isArray((res as Record<string, unknown>).bookings)) return (res as Record<string, unknown>).bookings as BookingListItem[];
+    if (res && typeof res === 'object' && Array.isArray((res as Record<string, unknown>).data)) return (res as Record<string, unknown>).data as BookingListItem[];
+    return [];
+  }),
   getDetail: (id: string) => api.get<BookingDetail>(`/api/gateway/bookings/${id}`),
   cancel: (id: string) => api.post<{ success: boolean }>(`/api/gateway/bookings/${id}/cancel`, {}),
 };
