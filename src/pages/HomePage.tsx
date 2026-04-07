@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import OperatorLogo from '@/components/OperatorLogo';
 import OperatorBottomSheet from '@/components/OperatorBottomSheet';
-import { ArrowDownUp, Search, Loader2, MapPin, CalendarDays, Users, X, Percent, Star, ArrowRight, Bus, ChevronRight } from 'lucide-react';
+import { ArrowDownUp, Search, MapPin, CalendarDays, Users, X, Percent, Star, ArrowRight, Bus, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const CITY_IMAGES: Record<string, string> = {
@@ -190,10 +190,10 @@ export default function HomePage() {
               onClick={search}
               size="lg"
               className="w-full mt-5 h-[54px] text-[15px] font-bold rounded-2xl bg-teal-900 hover:bg-teal-950 shadow-lg shadow-teal-900/20 transition-all active:scale-[0.98]"
-              disabled={!origin || !destination || !date || loading}
+              disabled={!origin || !destination || !date}
               data-testid="button-search"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5 mr-1" />}
+              <Search className="w-5 h-5 mr-1" />
               Cari Tiket
             </Button>
           </div>
