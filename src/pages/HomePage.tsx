@@ -54,6 +54,10 @@ export default function HomePage() {
   const setPassengers = (v: number) => { setPassengersRaw(v); sessionStorage.setItem('t_pax', String(v)); };
 
   useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    if (date < today) {
+      setDate(today);
+    }
     tripsApi.getCitiesAndOperators()
       .then(({ cities }) => { setCities(cities); })
       .catch(() => {})
