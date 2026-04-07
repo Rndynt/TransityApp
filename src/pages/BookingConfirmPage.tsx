@@ -19,9 +19,13 @@ interface Props {
   seats: string[];
   tripLabel: string;
   fare: number;
+  originStopName?: string;
+  destStopName?: string;
+  originTime?: string;
+  destTime?: string;
 }
 
-export default function BookingConfirmPage({ tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, seats, tripLabel, fare }: Props) {
+export default function BookingConfirmPage({ tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, seats, tripLabel, fare, originStopName, destStopName, originTime, destTime }: Props) {
   const { navigate, goBack } = useNav();
   const { user } = useAuth();
   const [passengers, setPassengers] = useState(
@@ -34,14 +38,26 @@ export default function BookingConfirmPage({ tripId, serviceDate, originStopId, 
   const [error, setError] = useState('');
 
   const { data: tripDetail } = useQuery({
-    queryKey: ['trip-detail', tripId],
-    queryFn: () => tripsApi.getDetail(tripId),
+    queryKey: ['trip-detail', tripId, serviceDate],
+    queryFn: () => tripsApi.getDetail(tripId, serviceDate),
   });
 
   const mutation = useMutation({
     mutationFn: (data: CreateBookingData) => bookingsApi.create(data),
     onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.bookingId, source: 'gateway' }),
-    onError: (err: Error) => setError(err.message),
+    onError: (err: any) => {
+      let msg = err?.message || 'Terjadi kesalahan';
+      if (err?.details) {
+        if (Array.isArray(err.details)) {
+          msg += ': ' + err.details.map((d: any) => d.message || d).join(', ');
+        } else if (typeof err.details === 'object') {
+          msg += ': ' + Object.values(err.details).join(', ');
+        } else {
+          msg += ': ' + String(err.details);
+        }
+      }
+      setError(msg);
+    },
   });
 
   const updatePassenger = (idx: number, field: 'fullName' | 'phone', value: string) => {
@@ -61,8 +77,12 @@ export default function BookingConfirmPage({ tripId, serviceDate, originStopId, 
     });
   };
 
-  const originStop = tripDetail?.stops?.find((s) => s.stopId === originStopId);
-  const destStop = tripDetail?.stops?.find((s) => s.stopId === destStopId);
+  const originStopFromApi = tripDetail?.stops?.find((s) => s.stopId === originStopId);
+  const destStopFromApi = tripDetail?.stops?.find((s) => s.stopId === destStopId);
+  const displayOriginName = originStopName || originStopFromApi?.name || 'Keberangkatan';
+  const displayDestName = destStopName || destStopFromApi?.name || 'Tujuan';
+  const displayOriginTime = originTime || originStopFromApi?.departAt;
+  const displayDestTime = destTime || destStopFromApi?.arriveAt;
 
   return (
     <div className="anim-fade">
@@ -83,12 +103,12 @@ export default function BookingConfirmPage({ tripId, serviceDate, originStopId, 
               </div>
               <div className="flex-1 space-y-4">
                 <div>
-                  <p className="font-semibold text-[14px]">{originStop?.name || 'Keberangkatan'}</p>
-                  <p className="text-[12px] text-slate-400">{fmtTime(originStop?.departAt)}</p>
+                  <p className="font-semibold text-[14px]">{displayOriginName}</p>
+                  <p className="text-[12px] text-slate-400">{fmtTime(displayOriginTime)}</p>
                 </div>
                 <div>
-                  <p className="font-semibold text-[14px]">{destStop?.name || 'Tujuan'}</p>
-                  <p className="text-[12px] text-slate-400">{fmtTime(destStop?.arriveAt)}</p>
+                  <p className="font-semibold text-[14px]">{displayDestName}</p>
+                  <p className="text-[12px] text-slate-400">{fmtTime(displayDestTime)}</p>
                 </div>
               </div>
             </div>

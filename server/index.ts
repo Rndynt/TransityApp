@@ -46,6 +46,12 @@ app.addHook('onRequest', async (req, reply) => {
     const contentType = res.headers.get('content-type') || '';
     const body = contentType.includes('json') ? await res.json() : await res.text();
 
+    if (!res.ok && req.url.includes('/bookings')) {
+      console.log(`[proxy] ${req.method} ${req.url} -> ${res.status}`);
+      console.log('[proxy] request body:', rawBody);
+      console.log('[proxy] response:', JSON.stringify(body));
+    }
+
     reply.status(res.status);
     if (contentType) reply.header('content-type', contentType);
     reply.send(body);

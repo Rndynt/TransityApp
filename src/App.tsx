@@ -22,8 +22,8 @@ type Page =
   | { name: 'search-results'; originCity: string; destinationCity: string; date: string; passengers: number; operatorFilter?: string | null }
   | { name: 'trip-detail'; tripId: string; serviceDate: string; passengers: number; originCity: string; destCity: string; trip: import('@/lib/api').TripSearchResult; rawStops: import('@/lib/api').TripStopInfo[] }
   | { name: 'select-stops'; tripId: string; serviceDate: string; passengers: number; tripLabel: string; fare: number; stops?: import('@/lib/api').TripStopInfo[]; originCity: string; destCity: string; originSeq: number; destSeq: number }
-  | { name: 'select-seats'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; passengers: number; tripLabel: string; fare: number }
-  | { name: 'booking-confirm'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; seats: string[]; tripLabel: string; fare: number }
+  | { name: 'select-seats'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; passengers: number; tripLabel: string; fare: number; originStopName?: string; destStopName?: string; originTime?: string; destTime?: string }
+  | { name: 'booking-confirm'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; seats: string[]; tripLabel: string; fare: number; originStopName?: string; destStopName?: string; originTime?: string; destTime?: string }
   | { name: 'booking-detail'; bookingId: string; source?: 'gateway' | 'terminal' }
   | { name: 'my-trips' }
   | { name: 'auth'; returnTo?: Page }

@@ -19,9 +19,13 @@ interface Props {
   passengers: number;
   tripLabel: string;
   fare: number;
+  originStopName?: string;
+  destStopName?: string;
+  originTime?: string;
+  destTime?: string;
 }
 
-export default function SelectSeatsPage({ tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, passengers, tripLabel, fare }: Props) {
+export default function SelectSeatsPage({ tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, passengers, tripLabel, fare, originStopName, destStopName, originTime, destTime }: Props) {
   const { navigate, goBack } = useNav();
   const { isLoggedIn } = useAuth();
   const [selected, setSelected] = useState<string[]>([]);
@@ -44,6 +48,7 @@ export default function SelectSeatsPage({ tripId, serviceDate, originStopId, des
     const target = {
       name: 'booking-confirm' as const,
       tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, seats, tripLabel, fare,
+      originStopName, destStopName, originTime, destTime,
     };
     if (!isLoggedIn) {
       navigate({ name: 'auth', returnTo: target });

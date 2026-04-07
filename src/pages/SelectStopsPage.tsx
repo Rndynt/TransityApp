@@ -89,6 +89,10 @@ export default function SelectStopsPage({ tripId, serviceDate, passengers, tripL
         passengers,
         tripLabel,
         fare,
+        originStopName: pickupStop.name,
+        destStopName: dropStop.name,
+        originTime: pickupStop.departAt || undefined,
+        destTime: dropStop.arriveAt || undefined,
       });
     },
   });
@@ -109,6 +113,10 @@ export default function SelectStopsPage({ tripId, serviceDate, passengers, tripL
         passengers,
         tripLabel,
         fare,
+        originStopName: pickupStop.name,
+        destStopName: dropStop.name,
+        originTime: pickupStop.departAt || undefined,
+        destTime: dropStop.arriveAt || undefined,
       });
     }
   };
