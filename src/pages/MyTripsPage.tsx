@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNav, useAuth } from '@/App';
 import { bookingsApi, type BookingListItem } from '@/lib/api';
-import { fmtCurrency } from '@/lib/utils';
+import { fmtCurrency, fmtTime } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Ticket, ChevronRight, LogIn, CalendarDays, Search, Clock } from 'lucide-react';
+import { Ticket, LogIn, CalendarDays, Search, Clock, Bus, MapPin, Users, ArrowRight } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import { BookingCardSkeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -29,25 +29,178 @@ function HoldCountdown({ expiresAt }: { expiresAt: string }) {
     return () => clearInterval(timer);
   }, [expiresAt]);
 
-  if (remaining <= 0) return <span className="text-[11px] text-red-500 font-medium">Kedaluwarsa</span>;
+  if (remaining <= 0) return null;
   const m = Math.floor(remaining / 60);
   const s = remaining % 60;
   const isUrgent = remaining <= 120;
   return (
-    <span className={cn('flex items-center gap-1 text-[11px] font-semibold tabular-nums', isUrgent ? 'text-amber-600' : 'text-teal-600')}>
+    <div className={cn(
+      'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold tabular-nums',
+      isUrgent ? 'bg-amber-50 text-amber-600' : 'bg-teal-50 text-teal-600'
+    )}>
       <Clock className="w-3 h-3" />
       {String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}
+    </div>
+  );
+}
+
+const STATUS_CFG: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'destructive' | 'secondary'; bg: string; text: string; dot: string }> = {
+  held: { label: 'Menunggu Bayar', variant: 'warning', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
+  confirmed: { label: 'Aktif', variant: 'success', bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-400' },
+  completed: { label: 'Selesai', variant: 'secondary', bg: 'bg-slate-100', text: 'text-slate-500', dot: 'bg-slate-400' },
+  cancelled: { label: 'Dibatalkan', variant: 'destructive', bg: 'bg-red-50', text: 'text-red-600', dot: 'bg-red-400' },
+  expired: { label: 'Kedaluwarsa', variant: 'destructive', bg: 'bg-red-50', text: 'text-red-600', dot: 'bg-red-400' },
+};
+
+function StatusPill({ status }: { status: string }) {
+  const cfg = STATUS_CFG[status] || { label: status, bg: 'bg-slate-100', text: 'text-slate-500', dot: 'bg-slate-400' };
+  return (
+    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide', cfg.bg, cfg.text)}>
+      <span className={cn('w-1.5 h-1.5 rounded-full', cfg.dot)} />
+      {cfg.label}
     </span>
   );
 }
 
-const STATUS_CFG: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'destructive' | 'secondary' }> = {
-  held: { label: 'Menunggu', variant: 'warning' },
-  confirmed: { label: 'Aktif', variant: 'success' },
-  completed: { label: 'Selesai', variant: 'secondary' },
-  cancelled: { label: 'Batal', variant: 'destructive' },
-  expired: { label: 'Expired', variant: 'destructive' },
-};
+function TicketCard({ booking, index, onClick }: { booking: BookingListItem; index: number; onClick: () => void }) {
+  const hasRoute = booking.origin || booking.destination;
+  const departTime = booking.origin?.departAt ? fmtTime(booking.origin.departAt) : null;
+  const arriveTime = booking.destination?.arriveAt ? fmtTime(booking.destination.arriveAt) : null;
+  const isInactive = booking.status === 'cancelled' || booking.status === 'expired' || booking.status === 'completed';
+
+  let dateLabel = '';
+  try {
+    if (booking.serviceDate) dateLabel = format(parseISO(booking.serviceDate), 'EEEE, d MMM yyyy', { locale: idLocale });
+  } catch {}
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'w-full text-left transition-all active:scale-[0.98] anim-slide-up',
+        `delay-${Math.min(index + 1, 4)}`,
+        isInactive && 'opacity-60',
+      )}
+      data-testid={`card-booking-${booking.id}`}
+    >
+      <div className="bg-white rounded-2xl shadow-soft overflow-hidden">
+        <div className="relative px-4 pt-4 pb-3">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                'w-8 h-8 rounded-xl flex items-center justify-center',
+                isInactive ? 'bg-slate-100' : 'bg-teal-50'
+              )}>
+                <Bus className={cn('w-4 h-4', isInactive ? 'text-slate-400' : 'text-teal-600')} />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+                  {booking.operatorName || 'Shuttle'}
+                </p>
+              </div>
+            </div>
+            <StatusPill status={booking.status || 'unknown'} />
+          </div>
+
+          {hasRoute ? (
+            <div className="flex items-stretch gap-3">
+              <div className="flex flex-col items-center py-1">
+                <div className="w-2.5 h-2.5 rounded-full border-2 border-teal-500 bg-white" />
+                <div className="w-[1.5px] flex-1 bg-gradient-to-b from-teal-400 to-coral-400 my-1 min-h-[24px]" />
+                <div className="w-2.5 h-2.5 rounded-full bg-coral-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline justify-between mb-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-[15px] text-slate-800 truncate">
+                      {booking.origin?.name || booking.origin?.city || '-'}
+                    </p>
+                    {booking.origin?.city && booking.origin?.name && (
+                      <p className="text-[11px] text-slate-400">{booking.origin.city}</p>
+                    )}
+                  </div>
+                  {departTime && (
+                    <span className="text-[18px] font-display font-bold text-teal-800 tabular-nums ml-3 shrink-0">
+                      {departTime}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-[15px] text-slate-800 truncate">
+                      {booking.destination?.name || booking.destination?.city || '-'}
+                    </p>
+                    {booking.destination?.city && booking.destination?.name && (
+                      <p className="text-[11px] text-slate-400">{booking.destination.city}</p>
+                    )}
+                  </div>
+                  {arriveTime && (
+                    <span className="text-[18px] font-display font-bold text-slate-500 tabular-nums ml-3 shrink-0">
+                      {arriveTime}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : booking.passengerName ? (
+            <div className="flex items-center gap-2 py-2">
+              <Users className="w-4 h-4 text-slate-400" />
+              <span className="font-semibold text-[14px] text-slate-700">{booking.passengerName}</span>
+              {booking.seatNumbers.length > 0 && (
+                <span className="text-[11px] text-teal-600 font-bold bg-teal-50 px-2 py-0.5 rounded-md">
+                  Kursi {booking.seatNumbers.join(', ')}
+                </span>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="relative">
+          <div className="absolute left-0 top-0 w-full flex items-center">
+            <div className="w-3 h-6 bg-slate-50 rounded-r-full -ml-[1px]" />
+            <div className="flex-1 border-t-2 border-dashed border-slate-100 mx-1" />
+            <div className="w-3 h-6 bg-slate-50 rounded-l-full -mr-[1px]" />
+          </div>
+        </div>
+
+        <div className="px-4 pt-5 pb-3.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {dateLabel && (
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
+                  <CalendarDays className="w-3 h-3" />
+                  {dateLabel}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {booking.status === 'held' && booking.holdExpiresAt && (
+                <HoldCountdown expiresAt={booking.holdExpiresAt} />
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mt-2.5">
+            <div className="flex items-center gap-3">
+              <span className="text-[12px] text-slate-400 font-medium">
+                {booking.seatNumbers.length > 0
+                  ? `Kursi ${booking.seatNumbers.join(', ')}`
+                  : `${booking.passengerCount} penumpang`
+                }
+              </span>
+            </div>
+            <span className={cn(
+              'font-display font-extrabold text-[18px]',
+              isInactive ? 'text-slate-400' : 'text-teal-800'
+            )}>
+              {fmtCurrency(booking.totalAmount)}
+            </span>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
 
 export default function MyTripsPage() {
   const { navigate } = useNav();
@@ -65,12 +218,15 @@ export default function MyTripsPage() {
 
   const activeCount = bookings?.filter(b => b.status === 'confirmed' || b.status === 'held').length ?? 0;
 
+  const activeBookings = bookings?.filter(b => b.status === 'confirmed' || b.status === 'held') || [];
+  const pastBookings = bookings?.filter(b => b.status !== 'confirmed' && b.status !== 'held') || [];
+
   return (
     <div className="anim-fade min-h-screen bg-slate-50">
       <PageHeader
         title="Pesanan Saya"
         subtitle={isLoggedIn
-          ? (isLoading ? 'Memuat pesanan...' : `${activeCount > 0 ? `${activeCount} tiket aktif` : 'Riwayat dan tiket aktif Anda'}`)
+          ? (isLoading ? 'Memuat pesanan...' : `${activeCount > 0 ? `${activeCount} tiket aktif` : 'Riwayat perjalanan Anda'}`)
           : 'Masuk untuk melihat pesanan'
         }
         rightContent={isLoggedIn && bookings && bookings.length > 0 ? (
@@ -112,7 +268,7 @@ export default function MyTripsPage() {
                 <Ticket className="w-11 h-11 text-teal-400" />
               </div>
               <div className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center border-4 border-white shadow-sm">
-                <span className="text-[16px]">✨</span>
+                <Search className="w-4 h-4 text-amber-600" />
               </div>
             </div>
             <h3 className="font-display font-bold text-[18px] text-slate-800 mb-2">Belum Ada Perjalanan</h3>
@@ -129,60 +285,45 @@ export default function MyTripsPage() {
           </div>
         )}
 
-        <div className="space-y-3">
-          {bookings?.map((b: BookingListItem, i: number) => {
-            const st = STATUS_CFG[b.status || ''] || { label: b.status, variant: 'secondary' as const };
-            let dateLabel = '';
-            try { if (b.serviceDate) dateLabel = format(parseISO(b.serviceDate), 'd MMM yyyy', { locale: idLocale }); } catch {}
+        {activeBookings.length > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <div className="w-1.5 h-4 rounded-full bg-teal-500" />
+              <h2 className="text-[13px] font-bold text-slate-600 uppercase tracking-wider">Tiket Aktif</h2>
+            </div>
+            <div className="space-y-3">
+              {activeBookings.map((b, i) => (
+                <TicketCard
+                  key={b.id}
+                  booking={b}
+                  index={i}
+                  onClick={() => navigate({ name: 'booking-detail', bookingId: b.id, source: 'gateway' })}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
-            return (
-              <button
-                key={b.id}
-                onClick={() => navigate({ name: 'booking-detail', bookingId: b.id, source: 'gateway' })}
-                className={cn(
-                  'w-full text-left bg-white rounded-2xl shadow-soft overflow-hidden transition-all hover:shadow-lifted active:scale-[0.98] anim-slide-up',
-                  `delay-${Math.min(i + 1, 4)}`,
-                )}
-                data-testid={`card-booking-${b.id}`}
-              >
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[14px] text-slate-800 truncate">{b.patternName || b.operatorName || b.patternCode || 'Perjalanan'}</p>
-                      <p className="text-[12px] text-slate-400 mt-0.5">{dateLabel}</p>
-                    </div>
-                    <Badge variant={st.variant} className="rounded-lg text-[10px] font-bold shrink-0 ml-2">{st.label}</Badge>
-                  </div>
-
-                  {(b.origin || b.destination) ? (
-                    <div className="flex items-center gap-2 text-[13px] font-medium text-slate-600 mb-2">
-                      <span className="truncate max-w-[40%]">{b.origin?.name || b.origin?.city || '-'}</span>
-                      <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-300" />
-                      <span className="truncate max-w-[40%]">{b.destination?.name || b.destination?.city || '-'}</span>
-                    </div>
-                  ) : b.passengerName ? (
-                    <div className="flex items-center gap-2 text-[13px] font-medium text-slate-600 mb-2">
-                      <span className="truncate">{b.passengerName}</span>
-                      {b.seatNumbers && b.seatNumbers.length > 0 && (
-                        <span className="text-[11px] text-teal-600 font-bold bg-teal-50 px-1.5 py-0.5 rounded">Kursi {b.seatNumbers.join(', ')}</span>
-                      )}
-                    </div>
-                  ) : null}
-
-                  <div className="flex justify-between items-center pt-2 border-t border-dashed border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[12px] text-slate-400">{b.passengerCount} penumpang</span>
-                      {b.status === 'held' && b.holdExpiresAt && (
-                        <HoldCountdown expiresAt={b.holdExpiresAt} />
-                      )}
-                    </div>
-                    <span className="font-display font-bold text-[15px] text-teal-800">{fmtCurrency(b.totalAmount)}</span>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        {pastBookings.length > 0 && (
+          <div>
+            {activeBookings.length > 0 && (
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <div className="w-1.5 h-4 rounded-full bg-slate-300" />
+                <h2 className="text-[13px] font-bold text-slate-400 uppercase tracking-wider">Riwayat</h2>
+              </div>
+            )}
+            <div className="space-y-3">
+              {pastBookings.map((b, i) => (
+                <TicketCard
+                  key={b.id}
+                  booking={b}
+                  index={i + activeBookings.length}
+                  onClick={() => navigate({ name: 'booking-detail', bookingId: b.id, source: 'gateway' })}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

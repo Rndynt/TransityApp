@@ -16,6 +16,8 @@ export interface StopSummary {
   name: string;
   code: string;
   city: string | null;
+  departAt?: string | null;
+  arriveAt?: string | null;
 }
 
 export interface StopDetail extends StopSummary {
