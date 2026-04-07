@@ -59,26 +59,29 @@ Semua API request diarahkan ke Console Gateway. Auth terpusat di Console — sat
 
 ### Trip Search & Booking Flow
 1. HomePage → pilih kota, tanggal
-2. SearchResultsPage → daftar jadwal dari semua operator
+2. SearchResultsPage → daftar jadwal dari semua operator + **date strip 7 hari** untuk ganti tanggal langsung
 3. SelectStopsPage → pilih titik naik/turun (filter pakai `boardingAllowed`/`alightingAllowed`)
 4. **Materialize** — trip virtual di-materialize lewat `POST /api/gateway/trips/materialize`
 5. SelectSeatsPage → pilih kursi dari seatmap
-6. BookingConfirmPage → isi data penumpang → klik "Pilih Pembayaran" → **booking dibuat dengan status `held`** (kursi ter-reserve, belum bayar)
-7. PaymentPage → countdown timer `holdExpiresAt`, pilih metode pembayaran, input voucher/promo → klik "Bayar" → `POST /api/gateway/bookings/{id}/pay`
+6. BookingConfirmPage → isi data penumpang → klik "Pilih Pembayaran" → **bottom sheet konfirmasi** → booking dibuat (`POST /api/gateway/bookings`) → status `held`, kursi ter-reserve
+7. PaymentPage → countdown timer `holdExpiresAt`, pilih metode bayar, voucher → "Bayar" → `POST /api/gateway/bookings/{id}/pay`
 8. BookingDetailPage → detail pesanan setelah berhasil dibayar
 
-### Payment & Hold Flow (Dual-mode)
-- PaymentPage mendukung 2 mode:
-  - **Mode langsung** (Console belum support hold): booking dibuat di PaymentPage dengan `paymentMethod` via `POST /api/gateway/bookings`
-  - **Mode hold** (Console sudah support hold): booking dibuat held di BookingConfirmPage, bayar via `POST /api/gateway/bookings/{id}/pay`
-- Saat ini menggunakan **mode langsung** karena Console masih wajibkan `paymentMethod`
-- PaymentPage props: `bookingId?` + `holdExpiresAt?` — jika ada, pakai mode hold; jika tidak, pakai mode langsung
-- Jika mode hold: countdown timer dari `holdExpiresAt`, tombol bayar disabled jika waktu habis
+### Booking & Payment Flow (Hold-first)
+- **Booking dibuat di BookingConfirmPage** (bukan di PaymentPage) — kursi di-hold dulu sebelum masuk halaman pembayaran
+- BookingConfirmPage: bottom sheet konfirmasi "Lanjut Pesan" → create booking → navigasi ke PaymentPage dengan `bookingId` + `holdExpiresAt`
+- PaymentPage **hanya menangani pembayaran** (booking sudah ada)
+- Jika user klik back di PaymentPage → **bottom sheet konfirmasi keluar** ("Keluar" / "Lanjut Transaksi")
+- Jika keluar → diarahkan ke "Pesanan Saya" (booking unpaid tetap muncul)
+- Countdown timer dari `holdExpiresAt`, tombol bayar disabled jika waktu habis
 - Pesanan `held` muncul di "Pesanan Saya" (MyTripsPage) dengan countdown timer
 - BookingDetailPage: tombol "Bayar Sekarang" untuk resume payment pesanan held
-- Metode pembayaran diambil dari `GET /api/gateway/payments/methods` — jika API belum ada, fallback ke daftar default
-- Input voucher/promo dengan validasi via `POST /api/gateway/vouchers/validate` — jika API belum ada, menampilkan error "tidak valid"
+- Metode pembayaran diambil dari `GET /api/gateway/payments/methods` — data dinormalisasi (type mapping + default enabled)
+- Input voucher/promo dengan validasi via `POST /api/gateway/vouchers/validate`
 - Console API requirements didokumentasikan di `docs/console-api-requirements.md`
+
+### Komponen Baru
+- `ConfirmSheet` — bottom sheet konfirmasi reusable (title, description, icon, confirm/cancel, loading, error, variant default/warning)
 
 ### Profile
 - Info akun (nama, email, HP, tanggal bergabung)

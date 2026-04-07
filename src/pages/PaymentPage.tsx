@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNav } from '@/App';
-import { bookingsApi, paymentsApi, type CreateBookingData, type PayBookingData, type PaymentMethod } from '@/lib/api';
+import { bookingsApi, paymentsApi, type PayBookingData, type PaymentMethod } from '@/lib/api';
 import { fmtCurrency, fmtTime } from '@/lib/utils';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Loader2, CreditCard, Wallet, QrCode, Building2, Smartphone, Tag, X, Check, ChevronRight, TicketPercent, Clock, AlertTriangle } from 'lucide-react';
+import { Loader2, CreditCard, Wallet, QrCode, Building2, Smartphone, Tag, X, Check, ChevronRight, TicketPercent, Clock, AlertTriangle, LogOut } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
+import ConfirmSheet from '@/components/ConfirmSheet';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -23,8 +24,8 @@ interface Props {
   originTime?: string;
   destTime?: string;
   passengers: Array<{ fullName: string; phone?: string; seatNo: string }>;
-  bookingId?: string;
-  holdExpiresAt?: string | null;
+  bookingId: string;
+  holdExpiresAt: string;
 }
 
 const FALLBACK_METHODS: PaymentMethod[] = [
@@ -94,7 +95,7 @@ function useCountdown(expiresAt: string | null | undefined) {
 }
 
 export default function PaymentPage({ tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, seats, tripLabel, fare, originStopName, destStopName, originTime, destTime, passengers, bookingId, holdExpiresAt }: Props) {
-  const { navigate, goBack } = useNav();
+  const { navigate } = useNav();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [voucherCode, setVoucherCode] = useState('');
   const [voucherApplied, setVoucherApplied] = useState<{ code: string; discount: number } | null>(null);
@@ -102,8 +103,8 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
   const [voucherLoading, setVoucherLoading] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
-  const isHeldBooking = !!bookingId;
   const countdown = useCountdown(holdExpiresAt);
 
   const { data: apiMethods } = useQuery({
@@ -127,29 +128,10 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
 
   const groupOrder: PaymentMethod['type'][] = ['qris', 'ewallet', 'virtual_account', 'bank_transfer', 'other'];
 
-  const createMutation = useMutation({
-    mutationFn: (data: CreateBookingData) => bookingsApi.create(data),
-    onMutate: () => setSubmitting(true),
-    onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.bookingId, source: 'gateway' }),
-    onError: (err: any) => {
-      if (err?.code === 'TERMINAL_UNAVAILABLE') {
-        setError('Koneksi ke operator timeout. Pesanan mungkin sudah terproses — cek halaman Pesanan Saya. Jangan klik ulang untuk menghindari duplikasi.');
-        return;
-      }
-      if (err?.code === 'TERMINAL_ERROR') {
-        setError('Gagal membuat pesanan. Sistem operator sedang bermasalah, silakan coba lagi nanti.');
-        setSubmitting(false);
-        return;
-      }
-      setError(err?.message || 'Terjadi kesalahan');
-      setSubmitting(false);
-    },
-  });
-
   const payMutation = useMutation({
-    mutationFn: (data: PayBookingData) => bookingsApi.pay(bookingId!, data),
+    mutationFn: (data: PayBookingData) => bookingsApi.pay(bookingId, data),
     onMutate: () => setSubmitting(true),
-    onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.bookingId || bookingId!, source: 'gateway' }),
+    onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.bookingId || bookingId, source: 'gateway' }),
     onError: (err: any) => {
       if (err?.code === 'HOLD_EXPIRED') {
         setError('Waktu pemesanan telah habis. Silakan ulangi pemesanan.');
@@ -158,6 +140,7 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
       }
       if (err?.code === 'TERMINAL_UNAVAILABLE') {
         setError('Koneksi ke operator timeout. Pembayaran mungkin sudah terproses — cek halaman Pesanan Saya.');
+        setSubmitting(false);
         return;
       }
       if (err?.code === 'TERMINAL_ERROR') {
@@ -170,7 +153,7 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
     },
   });
 
-  const isPending = createMutation.isPending || payMutation.isPending || submitting;
+  const isPending = payMutation.isPending || submitting;
 
   const handleApplyVoucher = async () => {
     if (!voucherCode.trim()) return;
@@ -191,26 +174,23 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
       setError('Pilih metode pembayaran terlebih dahulu');
       return;
     }
-    if (isHeldBooking && countdown.expired) {
+    if (countdown.expired) {
       setError('Waktu pemesanan telah habis. Silakan ulangi pemesanan.');
       return;
     }
     setError('');
-
-    if (isHeldBooking) {
-      const data: PayBookingData = { paymentMethod: selectedMethod };
-      if (voucherApplied) data.voucherCode = voucherApplied.code;
-      payMutation.mutate(data);
-    } else {
-      createMutation.mutate({
-        tripId, serviceDate, originStopId, destinationStopId: destStopId, originSeq, destinationSeq: destSeq,
-        passengers,
-        paymentMethod: selectedMethod,
-      });
-    }
+    const data: PayBookingData = { paymentMethod: selectedMethod };
+    if (voucherApplied) data.voucherCode = voucherApplied.code;
+    payMutation.mutate(data);
   };
 
-  const handleExpiredBack = () => {
+  const handleBack = () => {
+    if (isPending) return;
+    setShowExitConfirm(true);
+  };
+
+  const handleExitConfirmed = () => {
+    setShowExitConfirm(false);
     navigate({ name: 'my-trips' });
   };
 
@@ -218,10 +198,10 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
 
   return (
     <div className="anim-fade">
-      <PageHeader title="Pembayaran" onBack={goBack} />
+      <PageHeader title="Pembayaran" onBack={handleBack} />
 
       <div className="px-4 pt-4 pb-40">
-        {isHeldBooking && holdExpiresAt && (
+        {holdExpiresAt && (
           <div className={cn(
             'flex items-center gap-3 px-4 py-3 rounded-2xl mb-3 anim-slide-up',
             countdown.expired
@@ -252,7 +232,7 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
               <Button
                 variant="outline"
                 className="h-9 px-4 rounded-xl text-[12px] font-bold border-red-300 text-red-600 hover:bg-red-100"
-                onClick={handleExpiredBack}
+                onClick={handleExitConfirmed}
               >
                 Kembali
               </Button>
@@ -364,7 +344,7 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
                     {group.map((m) => {
                       const Icon = getMethodIcon(m.type);
                       const isSelected = selectedMethod === m.id;
-                      const isDisabled = isHeldBooking && countdown.expired;
+                      const isDisabled = countdown.expired;
                       return (
                         <button
                           key={m.id}
@@ -446,17 +426,34 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
           <Button
             className="w-full h-13 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[15px] font-bold shadow-lg shadow-teal-900/15 transition-all active:scale-[0.97] gap-2"
             onClick={handlePay}
-            disabled={isPending || !selectedMethod || (isHeldBooking && countdown.expired)}
+            disabled={isPending || !selectedMethod || countdown.expired}
           >
             {isPending ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <CreditCard className="w-5 h-5" />
             )}
-            {isHeldBooking && countdown.expired ? 'Waktu Habis' : `Bayar ${fmtCurrency(total)}`}
+            {countdown.expired ? 'Waktu Habis' : `Bayar ${fmtCurrency(total)}`}
           </Button>
         </div>
       </div>
+
+      <ConfirmSheet
+        open={showExitConfirm}
+        onOpenChange={setShowExitConfirm}
+        title="Keluar dari Pembayaran?"
+        description="Pesananmu akan tetap tersimpan dan bisa dibayar nanti sebelum batas waktu habis."
+        icon={
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center">
+            <LogOut className="w-7 h-7 text-amber-600" />
+          </div>
+        }
+        confirmLabel="Keluar"
+        cancelLabel="Lanjut Transaksi"
+        onConfirm={handleExitConfirmed}
+        onCancel={() => setShowExitConfirm(false)}
+        variant="warning"
+      />
     </div>
   );
 }

@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useNav, useAuth } from '@/App';
-import { tripsApi } from '@/lib/api';
+import { tripsApi, bookingsApi, type CreateBookingData } from '@/lib/api';
 import { fmtCurrency, fmtTime } from '@/lib/utils';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { User, ArrowRight } from 'lucide-react';
+import { User, ArrowRight, ShieldCheck } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
+import ConfirmSheet from '@/components/ConfirmSheet';
 
 interface Props {
   tripId: string;
@@ -36,26 +37,58 @@ export default function BookingConfirmPage({ tripId, serviceDate, originStopId, 
     })),
   );
   const [error, setError] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [bookingError, setBookingError] = useState('');
 
   const { data: tripDetail } = useQuery({
     queryKey: ['trip-detail', tripId, serviceDate],
     queryFn: () => tripsApi.getDetail(tripId, serviceDate),
   });
 
+  const createBookingMutation = useMutation({
+    mutationFn: (data: CreateBookingData) => bookingsApi.create(data),
+    onSuccess: (booking) => {
+      setShowConfirm(false);
+      navigate({
+        name: 'payment',
+        tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, seats, tripLabel, fare,
+        originStopName, destStopName, originTime, destTime,
+        passengers: passengers.map((p) => ({ fullName: p.fullName.trim(), phone: p.phone || undefined, seatNo: p.seatNo })),
+        bookingId: booking.bookingId,
+        holdExpiresAt: booking.holdExpiresAt,
+      });
+    },
+    onError: (err: any) => {
+      if (err?.code === 'TERMINAL_UNAVAILABLE') {
+        setBookingError('Koneksi ke operator timeout. Silakan coba lagi.');
+        return;
+      }
+      if (err?.code === 'TERMINAL_ERROR') {
+        setBookingError(err?.message || 'Sistem operator sedang bermasalah.');
+        return;
+      }
+      setBookingError(err?.message || 'Gagal memesan kursi. Silakan coba lagi.');
+    },
+  });
+
   const updatePassenger = (idx: number, field: 'fullName' | 'phone', value: string) => {
     setPassengers((prev) => prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)));
   };
 
-  const proceedToPayment = () => {
+  const handleProceed = () => {
     if (passengers.some((p) => !p.fullName.trim())) {
       setError('Nama penumpang wajib diisi');
       return;
     }
     setError('');
-    navigate({
-      name: 'payment',
-      tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, seats, tripLabel, fare,
-      originStopName, destStopName, originTime, destTime,
+    setBookingError('');
+    setShowConfirm(true);
+  };
+
+  const handleConfirmBooking = () => {
+    setBookingError('');
+    createBookingMutation.mutate({
+      tripId, serviceDate, originStopId, destinationStopId: destStopId, originSeq, destinationSeq: destSeq,
       passengers: passengers.map((p) => ({ fullName: p.fullName.trim(), phone: p.phone || undefined, seatNo: p.seatNo })),
     });
   };
@@ -163,7 +196,7 @@ export default function BookingConfirmPage({ tripId, serviceDate, originStopId, 
             </div>
             <Button
               className="h-12 px-6 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[14px] font-bold shadow-lg shadow-teal-900/15 transition-all active:scale-[0.97] gap-2"
-              onClick={proceedToPayment}
+              onClick={handleProceed}
               data-testid="button-confirm"
             >
               <ArrowRight className="w-4 h-4" />
@@ -172,6 +205,24 @@ export default function BookingConfirmPage({ tripId, serviceDate, originStopId, 
           </div>
         </div>
       </div>
+
+      <ConfirmSheet
+        open={showConfirm}
+        onOpenChange={(v) => { if (!createBookingMutation.isPending) setShowConfirm(v); }}
+        title="Lanjutkan Pemesanan?"
+        description={`Kursi ${seats.join(', ')} akan dipesan atas namamu. Kamu punya waktu terbatas untuk menyelesaikan pembayaran.`}
+        icon={
+          <div className="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center">
+            <ShieldCheck className="w-7 h-7 text-teal-600" />
+          </div>
+        }
+        confirmLabel="Lanjut Pesan"
+        cancelLabel="Tidak, Kembali"
+        onConfirm={handleConfirmBooking}
+        onCancel={() => setShowConfirm(false)}
+        loading={createBookingMutation.isPending}
+        error={bookingError}
+      />
     </div>
   );
 }
