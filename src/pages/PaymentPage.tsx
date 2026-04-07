@@ -1,0 +1,320 @@
+import { useState } from 'react';
+import { useNav } from '@/App';
+import { bookingsApi, paymentsApi, type CreateBookingData, type PaymentMethod } from '@/lib/api';
+import { fmtCurrency, fmtTime } from '@/lib/utils';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { Loader2, CreditCard, Wallet, QrCode, Building2, Smartphone, Tag, X, Check, ChevronRight, TicketPercent } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
+import { cn } from '@/lib/utils';
+
+interface Props {
+  tripId: string;
+  serviceDate: string;
+  originStopId: string;
+  destStopId: string;
+  originSeq: number;
+  destSeq: number;
+  seats: string[];
+  tripLabel: string;
+  fare: number;
+  originStopName?: string;
+  destStopName?: string;
+  originTime?: string;
+  destTime?: string;
+  passengers: Array<{ fullName: string; phone?: string; seatNo: string }>;
+}
+
+const FALLBACK_METHODS: PaymentMethod[] = [
+  { id: 'qris', name: 'QRIS', type: 'qris', description: 'Scan QR dari e-wallet atau m-banking', enabled: true },
+  { id: 'bank_transfer', name: 'Transfer Bank', type: 'bank_transfer', description: 'BCA, Mandiri, BNI, BRI', enabled: true },
+  { id: 'ewallet_gopay', name: 'GoPay', type: 'ewallet', description: 'Bayar via GoPay', enabled: true },
+  { id: 'ewallet_ovo', name: 'OVO', type: 'ewallet', description: 'Bayar via OVO', enabled: true },
+  { id: 'ewallet_dana', name: 'DANA', type: 'ewallet', description: 'Bayar via DANA', enabled: true },
+  { id: 'ewallet_shopeepay', name: 'ShopeePay', type: 'ewallet', description: 'Bayar via ShopeePay', enabled: true },
+  { id: 'va_bca', name: 'Virtual Account BCA', type: 'virtual_account', description: 'Pembayaran via VA BCA', enabled: true },
+  { id: 'va_mandiri', name: 'Virtual Account Mandiri', type: 'virtual_account', description: 'Pembayaran via VA Mandiri', enabled: true },
+  { id: 'va_bni', name: 'Virtual Account BNI', type: 'virtual_account', description: 'Pembayaran via VA BNI', enabled: true },
+];
+
+function getMethodIcon(type: PaymentMethod['type']) {
+  switch (type) {
+    case 'qris': return QrCode;
+    case 'ewallet': return Wallet;
+    case 'bank_transfer': return Building2;
+    case 'virtual_account': return Smartphone;
+    default: return CreditCard;
+  }
+}
+
+function getMethodGroupLabel(type: PaymentMethod['type']) {
+  switch (type) {
+    case 'qris': return 'QRIS';
+    case 'ewallet': return 'E-Wallet';
+    case 'bank_transfer': return 'Transfer Bank';
+    case 'virtual_account': return 'Virtual Account';
+    default: return 'Lainnya';
+  }
+}
+
+export default function PaymentPage({ tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, seats, tripLabel, fare, originStopName, destStopName, originTime, destTime, passengers }: Props) {
+  const { navigate, goBack } = useNav();
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  const [voucherCode, setVoucherCode] = useState('');
+  const [voucherApplied, setVoucherApplied] = useState<{ code: string; discount: number } | null>(null);
+  const [voucherError, setVoucherError] = useState('');
+  const [voucherLoading, setVoucherLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const { data: apiMethods } = useQuery({
+    queryKey: ['payment-methods'],
+    queryFn: () => paymentsApi.getMethods(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const methods = (apiMethods && apiMethods.length > 0) ? apiMethods.filter(m => m.enabled) : FALLBACK_METHODS;
+
+  const subtotal = fare * seats.length;
+  const discount = voucherApplied?.discount || 0;
+  const total = Math.max(0, subtotal - discount);
+
+  const grouped = methods.reduce<Record<string, PaymentMethod[]>>((acc, m) => {
+    const key = m.type;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(m);
+    return acc;
+  }, {});
+
+  const groupOrder: PaymentMethod['type'][] = ['qris', 'ewallet', 'virtual_account', 'bank_transfer', 'other'];
+
+  const mutation = useMutation({
+    mutationFn: (data: CreateBookingData) => bookingsApi.create(data),
+    onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.bookingId, source: 'gateway' }),
+    onError: (err: any) => {
+      if (err?.code === 'TERMINAL_ERROR') {
+        setError('Gagal membuat pesanan. Sistem operator sedang bermasalah, silakan coba lagi nanti.');
+        return;
+      }
+      setError(err?.message || 'Terjadi kesalahan');
+    },
+  });
+
+  const handleApplyVoucher = async () => {
+    if (!voucherCode.trim()) return;
+    setVoucherLoading(true);
+    setVoucherError('');
+    const result = await paymentsApi.validateVoucher(voucherCode.trim(), tripId, subtotal);
+    setVoucherLoading(false);
+    if (result.valid && result.discount > 0) {
+      setVoucherApplied({ code: voucherCode.trim().toUpperCase(), discount: result.discount });
+      setVoucherCode('');
+    } else {
+      setVoucherError(result.message || 'Kode voucher tidak valid');
+    }
+  };
+
+  const handlePay = () => {
+    if (!selectedMethod) {
+      setError('Pilih metode pembayaran terlebih dahulu');
+      return;
+    }
+    setError('');
+    mutation.mutate({
+      tripId, serviceDate, originStopId, destinationStopId: destStopId, originSeq, destinationSeq: destSeq,
+      passengers,
+      paymentMethod: selectedMethod,
+    });
+  };
+
+  return (
+    <div className="anim-fade">
+      <PageHeader title="Pembayaran" onBack={goBack} />
+
+      <div className="px-4 pt-4 pb-40">
+        <div className="bg-white rounded-2xl shadow-soft overflow-hidden anim-slide-up">
+          <div className="px-4 pt-4 pb-3">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Ringkasan</p>
+            <p className="font-bold text-[15px] text-slate-800">{tripLabel}</p>
+          </div>
+          <div className="px-4 pb-4">
+            <div className="flex items-start gap-3">
+              <div className="flex flex-col items-center mt-1">
+                <div className="w-2.5 h-2.5 rounded-full border-2 border-teal-500" />
+                <div className="w-[1.5px] h-6 bg-gradient-to-b from-teal-400 to-coral-400 my-0.5" />
+                <div className="w-2.5 h-2.5 rounded-full bg-coral-500" />
+              </div>
+              <div className="flex-1 space-y-2.5">
+                <div>
+                  <p className="font-semibold text-[13px]">{originStopName || 'Keberangkatan'}</p>
+                  <p className="text-[11px] text-slate-400">{fmtTime(originTime)}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-[13px]">{destStopName || 'Tujuan'}</p>
+                  <p className="text-[11px] text-slate-400">{fmtTime(destTime)}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-3">
+              <div className="flex gap-1.5">
+                {seats.map((s) => (
+                  <span key={s} className="px-2 py-0.5 bg-teal-50 text-teal-700 rounded-md text-[11px] font-bold">{s}</span>
+                ))}
+              </div>
+              <span className="text-[11px] text-slate-400">·</span>
+              <span className="text-[11px] text-slate-500 font-medium">{passengers.length} penumpang</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-soft mt-3 overflow-hidden anim-slide-up delay-1">
+          <div className="px-4 pt-4 pb-2">
+            <div className="flex items-center gap-2 mb-1">
+              <TicketPercent className="w-4 h-4 text-orange-500" />
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Voucher / Promo</p>
+            </div>
+          </div>
+          <div className="px-4 pb-4">
+            {voucherApplied ? (
+              <div className="flex items-center justify-between bg-green-50 border border-green-200/60 rounded-xl px-3.5 py-3">
+                <div className="flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-green-600" />
+                  <div>
+                    <p className="text-[13px] font-bold text-green-700">{voucherApplied.code}</p>
+                    <p className="text-[11px] text-green-600">Hemat {fmtCurrency(voucherApplied.discount)}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setVoucherApplied(null)}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-green-100 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5 text-green-600" />
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={voucherCode}
+                    onChange={(e) => { setVoucherCode(e.target.value.toUpperCase()); setVoucherError(''); }}
+                    placeholder="Masukkan kode voucher"
+                    className="flex-1 h-11 px-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-[13px] font-semibold tracking-wider uppercase placeholder:text-slate-300 placeholder:normal-case placeholder:tracking-normal placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600/40 transition-all"
+                  />
+                  <Button
+                    variant="outline"
+                    className="h-11 px-4 rounded-xl text-[13px] font-bold border-teal-600/30 text-teal-700 hover:bg-teal-50"
+                    onClick={handleApplyVoucher}
+                    disabled={voucherLoading || !voucherCode.trim()}
+                  >
+                    {voucherLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Pakai'}
+                  </Button>
+                </div>
+                {voucherError && (
+                  <p className="text-[12px] text-red-500 font-medium mt-2">{voucherError}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-soft mt-3 overflow-hidden anim-slide-up delay-2">
+          <div className="px-4 pt-4 pb-2">
+            <div className="flex items-center gap-2 mb-1">
+              <CreditCard className="w-4 h-4 text-teal-600" />
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Metode Pembayaran</p>
+            </div>
+          </div>
+          <div className="px-4 pb-4 space-y-4">
+            {groupOrder.map((type) => {
+              const group = grouped[type];
+              if (!group || group.length === 0) return null;
+              return (
+                <div key={type}>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">{getMethodGroupLabel(type)}</p>
+                  <div className="space-y-1.5">
+                    {group.map((m) => {
+                      const Icon = getMethodIcon(m.type);
+                      const isSelected = selectedMethod === m.id;
+                      return (
+                        <button
+                          key={m.id}
+                          onClick={() => setSelectedMethod(m.id)}
+                          className={cn(
+                            'w-full flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all text-left',
+                            isSelected
+                              ? 'border-teal-500 bg-teal-50/60 ring-1 ring-teal-500/20'
+                              : 'border-slate-150 bg-white hover:bg-slate-50/80',
+                          )}
+                        >
+                          <div className={cn(
+                            'w-9 h-9 rounded-lg flex items-center justify-center shrink-0',
+                            isSelected ? 'bg-teal-100' : 'bg-slate-100',
+                          )}>
+                            <Icon className={cn('w-4.5 h-4.5', isSelected ? 'text-teal-600' : 'text-slate-400')} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn('text-[13px] font-semibold', isSelected ? 'text-teal-800' : 'text-slate-700')}>{m.name}</p>
+                            {m.description && (
+                              <p className="text-[11px] text-slate-400 truncate">{m.description}</p>
+                            )}
+                          </div>
+                          {isSelected ? (
+                            <Check className="w-5 h-5 text-teal-600 shrink-0" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-soft mt-3 overflow-hidden anim-slide-up delay-3">
+          <div className="px-4 py-4 space-y-2">
+            <div className="flex justify-between text-[13px]">
+              <span className="text-slate-500">Harga tiket ({seats.length}x)</span>
+              <span className="font-semibold text-slate-700">{fmtCurrency(subtotal)}</span>
+            </div>
+            {voucherApplied && (
+              <div className="flex justify-between text-[13px]">
+                <span className="text-green-600">Diskon voucher</span>
+                <span className="font-semibold text-green-600">-{fmtCurrency(discount)}</span>
+              </div>
+            )}
+            <div className="border-t border-dashed border-slate-200 pt-2 flex justify-between">
+              <span className="text-[14px] font-bold text-slate-800">Total</span>
+              <span className="text-[16px] font-extrabold font-display text-teal-900">{fmtCurrency(total)}</span>
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mt-3 px-4 py-3 bg-red-50 border border-red-200/60 rounded-2xl text-[13px] text-red-600 font-medium anim-scale">
+            {error}
+          </div>
+        )}
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 safe-bottom z-40">
+        <div className="max-w-lg mx-auto px-4 py-3">
+          <Button
+            className="w-full h-13 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[15px] font-bold shadow-lg shadow-teal-900/15 transition-all active:scale-[0.97] gap-2"
+            onClick={handlePay}
+            disabled={mutation.isPending || !selectedMethod}
+          >
+            {mutation.isPending ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <CreditCard className="w-5 h-5" />
+            )}
+            Bayar {fmtCurrency(total)}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

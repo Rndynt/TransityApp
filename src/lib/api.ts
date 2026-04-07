@@ -354,6 +354,36 @@ export const tripsApi = {
     api.get<unknown>('/api/gateway/service-lines'),
 };
 
+export interface PaymentMethod {
+  id: string;
+  name: string;
+  type: 'bank_transfer' | 'ewallet' | 'qris' | 'virtual_account' | 'other';
+  icon?: string;
+  description?: string;
+  enabled: boolean;
+}
+
+export const paymentsApi = {
+  getMethods: async (): Promise<PaymentMethod[]> => {
+    try {
+      const res = await api.get<PaymentMethod[] | { methods: PaymentMethod[] } | { data: PaymentMethod[] }>('/api/gateway/payments/methods');
+      if (Array.isArray(res)) return res;
+      if (res && typeof res === 'object' && Array.isArray((res as { methods: PaymentMethod[] }).methods)) return (res as { methods: PaymentMethod[] }).methods;
+      if (res && typeof res === 'object' && Array.isArray((res as { data: PaymentMethod[] }).data)) return (res as { data: PaymentMethod[] }).data;
+      return [];
+    } catch {
+      return [];
+    }
+  },
+  validateVoucher: async (code: string, tripId: string, amount: number): Promise<{ valid: boolean; discount: number; message?: string }> => {
+    try {
+      return await api.post<{ valid: boolean; discount: number; message?: string }>('/api/gateway/vouchers/validate', { code, tripId, amount } as unknown as Record<string, unknown>);
+    } catch (err: any) {
+      return { valid: false, discount: 0, message: err?.message || 'Kode voucher tidak valid' };
+    }
+  },
+};
+
 export const bookingsApi = {
   create: (data: CreateBookingData) =>
     api.post<GatewayBookingResponse>('/api/gateway/bookings', data as unknown as Record<string, unknown>),

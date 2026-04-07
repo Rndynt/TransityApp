@@ -6,6 +6,7 @@ import TripDetailPage from '@/pages/TripDetailPage';
 import SelectStopsPage from '@/pages/SelectStopsPage';
 import SelectSeatsPage from '@/pages/SelectSeatsPage';
 import BookingConfirmPage from '@/pages/BookingConfirmPage';
+import PaymentPage from '@/pages/PaymentPage';
 import BookingDetailPage from '@/pages/BookingDetailPage';
 import MyTripsPage from '@/pages/MyTripsPage';
 import AuthPage from '@/pages/AuthPage';
@@ -24,6 +25,7 @@ type Page =
   | { name: 'select-stops'; tripId: string; serviceDate: string; passengers: number; tripLabel: string; fare: number; stops?: import('@/lib/api').TripStopInfo[]; originCity: string; destCity: string; originSeq: number; destSeq: number }
   | { name: 'select-seats'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; passengers: number; tripLabel: string; fare: number; originStopName?: string; destStopName?: string; originTime?: string; destTime?: string }
   | { name: 'booking-confirm'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; seats: string[]; tripLabel: string; fare: number; originStopName?: string; destStopName?: string; originTime?: string; destTime?: string }
+  | { name: 'payment'; tripId: string; serviceDate: string; originStopId: string; destStopId: string; originSeq: number; destSeq: number; seats: string[]; tripLabel: string; fare: number; originStopName?: string; destStopName?: string; originTime?: string; destTime?: string; passengers: Array<{ fullName: string; phone?: string; seatNo: string }> }
   | { name: 'booking-detail'; bookingId: string; source?: 'gateway' | 'terminal' }
   | { name: 'my-trips' }
   | { name: 'auth'; returnTo?: Page }
@@ -122,6 +124,7 @@ function PageRouter() {
     case 'select-stops': return <SelectStopsPage {...page} />;
     case 'select-seats': return <SelectSeatsPage {...page} />;
     case 'booking-confirm': return <BookingConfirmPage {...page} />;
+    case 'payment': return <PaymentPage {...page} />;
     case 'booking-detail': return <BookingDetailPage bookingId={page.bookingId} source={page.source} />;
     case 'my-trips': return <MyTripsPage />;
     case 'auth': return <AuthPage returnTo={page.returnTo} />;
@@ -137,7 +140,7 @@ function BottomNav() {
   const { page, navigate } = useNav();
   const { isLoggedIn } = useAuth();
 
-  const hide = ['trip-detail', 'select-stops', 'select-seats', 'booking-confirm'].includes(page.name);
+  const hide = ['trip-detail', 'select-stops', 'select-seats', 'booking-confirm', 'payment'].includes(page.name);
   if (hide) return null;
 
   const tabs = [

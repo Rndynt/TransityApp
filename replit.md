@@ -58,12 +58,21 @@ Semua API request diarahkan ke Console Gateway. Auth terpusat di Console — sat
 - JWT token berlaku 30 hari, disimpan di localStorage
 
 ### Trip Search & Booking Flow
-1. HomePage → pilih kota, tanggal, operator
+1. HomePage → pilih kota, tanggal
 2. SearchResultsPage → daftar jadwal dari semua operator
 3. SelectStopsPage → pilih titik naik/turun (filter pakai `boardingAllowed`/`alightingAllowed`)
 4. **Materialize** — trip virtual di-materialize lewat `POST /api/gateway/trips/materialize`
 5. SelectSeatsPage → pilih kursi dari seatmap
-6. BookingConfirmPage → konfirmasi & bayar
+6. BookingConfirmPage → isi data penumpang → klik "Pilih Pembayaran"
+7. PaymentPage → pilih metode pembayaran, input voucher/promo, rincian harga → klik "Bayar"
+8. BookingDetailPage → detail pesanan setelah berhasil
+
+### Payment
+- Halaman pembayaran (`src/pages/PaymentPage.tsx`) terpisah dari konfirmasi penumpang
+- Metode pembayaran diambil dari `GET /api/gateway/payments/methods` — jika API belum ada, fallback ke daftar default (QRIS, e-wallet, transfer bank, virtual account)
+- Input voucher/promo dengan validasi via `POST /api/gateway/vouchers/validate` — jika API belum ada, menampilkan error "tidak valid"
+- Rincian harga: subtotal, diskon voucher, total
+- Payment method dikirim ke booking API via field `paymentMethod`
 
 ### Profile
 - Info akun (nama, email, HP, tanggal bergabung)
