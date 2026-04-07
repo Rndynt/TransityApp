@@ -115,13 +115,84 @@ export interface BookingListItem {
   serviceDate: string | null;
   patternCode: string | null;
   patternName: string | null;
+  operatorName: string | null;
   status: string | null;
   totalAmount: string | null;
   origin: StopSummary | null;
   destination: StopSummary | null;
   passengerCount: number;
+  passengerName: string | null;
+  seatNumbers: string[];
   createdAt?: string | null;
   holdExpiresAt?: string | null;
+}
+
+function normalizeBookingListItem(raw: any): BookingListItem {
+  return {
+    id: raw.bookingId || raw.id || '',
+    tripId: raw.tripId || '',
+    serviceDate: raw.serviceDate || null,
+    patternCode: raw.patternCode || null,
+    patternName: raw.patternName || raw.operatorName || null,
+    operatorName: raw.operatorName || null,
+    status: raw.status || null,
+    totalAmount: raw.finalAmount || raw.totalAmount || null,
+    origin: raw.origin || null,
+    destination: raw.destination || null,
+    passengerCount: raw.passengerCount ?? (raw.seatNumbers?.length || 1),
+    passengerName: raw.passengerName || null,
+    seatNumbers: raw.seatNumbers || [],
+    createdAt: raw.createdAt || null,
+    holdExpiresAt: raw.holdExpiresAt || null,
+  };
+}
+
+function normalizeBookingDetail(raw: any): BookingDetail {
+  const passengers: PassengerInfo[] = raw.passengers || [];
+  if (passengers.length === 0 && raw.passengerName) {
+    const seats: string[] = raw.seatNumbers || [];
+    seats.forEach((seat, i) => {
+      passengers.push({
+        id: `p-${i}`,
+        fullName: i === 0 ? raw.passengerName : `Penumpang ${i + 1}`,
+        phone: raw.passengerPhone || null,
+        seatNo: seat,
+        fareAmount: null,
+      });
+    });
+    if (passengers.length === 0) {
+      passengers.push({
+        id: 'p-0',
+        fullName: raw.passengerName,
+        phone: raw.passengerPhone || null,
+        seatNo: '-',
+        fareAmount: null,
+      });
+    }
+  }
+  return {
+    id: raw.bookingId || raw.id || '',
+    bookingId: raw.bookingId || raw.id || '',
+    tripId: raw.tripId || '',
+    serviceDate: raw.serviceDate || null,
+    patternCode: raw.patternCode || null,
+    patternName: raw.patternName || raw.operatorName || null,
+    operatorName: raw.operatorName || null,
+    operatorSlug: raw.operatorSlug || null,
+    origin: raw.origin || null,
+    destination: raw.destination || null,
+    departAt: raw.departAt || raw.departureTime || null,
+    arriveAt: raw.arriveAt || raw.arrivalTime || null,
+    status: raw.status || null,
+    totalAmount: raw.finalAmount || raw.totalAmount || null,
+    channel: raw.channel || null,
+    holdExpiresAt: raw.holdExpiresAt || null,
+    qrData: raw.qrData || [],
+    passengers,
+    payments: raw.payments || [],
+    paymentIntent: raw.paymentIntent || null,
+    createdAt: raw.createdAt || null,
+  };
 }
 
 export interface BookingDetail {
@@ -415,12 +486,15 @@ export const paymentsApi = {
 export const bookingsApi = {
   create: (data: CreateBookingData) =>
     api.post<GatewayBookingResponse>('/api/gateway/bookings', data as unknown as Record<string, unknown>),
-  getGatewayDetail: (bookingId: string) => api.get<BookingDetail>(`/api/gateway/bookings/${bookingId}`),
+  getGatewayDetail: (bookingId: string) => api.get<any>(`/api/gateway/bookings/${bookingId}`).then(res => {
+    return normalizeBookingDetail(res);
+  }),
   list: () => api.get<BookingListItem[] | Record<string, unknown>>('/api/gateway/bookings').then(res => {
-    if (Array.isArray(res)) return res;
-    if (res && typeof res === 'object' && Array.isArray((res as Record<string, unknown>).bookings)) return (res as Record<string, unknown>).bookings as BookingListItem[];
-    if (res && typeof res === 'object' && Array.isArray((res as Record<string, unknown>).data)) return (res as Record<string, unknown>).data as BookingListItem[];
-    return [];
+    let items: any[] = [];
+    if (Array.isArray(res)) items = res;
+    else if (res && typeof res === 'object' && Array.isArray((res as any).bookings)) items = (res as any).bookings;
+    else if (res && typeof res === 'object' && Array.isArray((res as any).data)) items = (res as any).data;
+    return items.map(normalizeBookingListItem);
   }),
   getDetail: (id: string) => api.get<BookingDetail>(`/api/gateway/bookings/${id}`),
   cancel: (id: string) => api.post<{ success: boolean }>(`/api/gateway/bookings/${id}/cancel`, {}),

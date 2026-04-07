@@ -148,17 +148,26 @@ export default function MyTripsPage() {
                 <div className="p-4">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[14px] text-slate-800 truncate">{b.patternName || b.patternCode || 'Perjalanan'}</p>
+                      <p className="font-bold text-[14px] text-slate-800 truncate">{b.patternName || b.operatorName || b.patternCode || 'Perjalanan'}</p>
                       <p className="text-[12px] text-slate-400 mt-0.5">{dateLabel}</p>
                     </div>
                     <Badge variant={st.variant} className="rounded-lg text-[10px] font-bold shrink-0 ml-2">{st.label}</Badge>
                   </div>
 
-                  <div className="flex items-center gap-2 text-[13px] font-medium text-slate-600 mb-2">
-                    <span className="truncate max-w-[40%]">{b.origin?.name || b.origin?.city || '-'}</span>
-                    <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-300" />
-                    <span className="truncate max-w-[40%]">{b.destination?.name || b.destination?.city || '-'}</span>
-                  </div>
+                  {(b.origin || b.destination) ? (
+                    <div className="flex items-center gap-2 text-[13px] font-medium text-slate-600 mb-2">
+                      <span className="truncate max-w-[40%]">{b.origin?.name || b.origin?.city || '-'}</span>
+                      <ChevronRight className="w-3.5 h-3.5 shrink-0 text-slate-300" />
+                      <span className="truncate max-w-[40%]">{b.destination?.name || b.destination?.city || '-'}</span>
+                    </div>
+                  ) : b.passengerName ? (
+                    <div className="flex items-center gap-2 text-[13px] font-medium text-slate-600 mb-2">
+                      <span className="truncate">{b.passengerName}</span>
+                      {b.seatNumbers && b.seatNumbers.length > 0 && (
+                        <span className="text-[11px] text-teal-600 font-bold bg-teal-50 px-1.5 py-0.5 rounded">Kursi {b.seatNumbers.join(', ')}</span>
+                      )}
+                    </div>
+                  ) : null}
 
                   <div className="flex justify-between items-center pt-2 border-t border-dashed border-slate-100">
                     <div className="flex items-center gap-2">

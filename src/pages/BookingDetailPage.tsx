@@ -110,23 +110,34 @@ export default function BookingDetailPage({ bookingId, source }: Props) {
         <div className="bg-white rounded-2xl shadow-soft overflow-hidden anim-slide-up">
           <div className="p-4">
             <p className="font-bold text-[16px] text-slate-800 mb-3">{booking.patternName || booking.patternCode || booking.operatorName || 'Detail Perjalanan'}</p>
-            <div className="flex items-start gap-3">
-              <div className="flex flex-col items-center mt-1.5">
-                <div className="w-2.5 h-2.5 rounded-full border-2 border-teal-500" />
-                <div className="w-[1.5px] h-10 bg-gradient-to-b from-teal-400 to-coral-400 my-0.5" />
-                <div className="w-2.5 h-2.5 rounded-full bg-coral-500" />
-              </div>
-              <div className="flex-1 space-y-5">
-                <div>
-                  <p className="font-semibold text-[14px]">{booking.origin?.name}</p>
-                  <p className="text-[12px] text-slate-400 mt-0.5">{fmtTime(booking.departAt)}</p>
+            {(booking.origin || booking.destination) ? (
+              <div className="flex items-start gap-3">
+                <div className="flex flex-col items-center mt-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full border-2 border-teal-500" />
+                  <div className="w-[1.5px] h-10 bg-gradient-to-b from-teal-400 to-coral-400 my-0.5" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-coral-500" />
                 </div>
-                <div>
-                  <p className="font-semibold text-[14px]">{booking.destination?.name}</p>
-                  <p className="text-[12px] text-slate-400 mt-0.5">{fmtTime(booking.arriveAt)}</p>
+                <div className="flex-1 space-y-5">
+                  <div>
+                    <p className="font-semibold text-[14px]">{booking.origin?.name}</p>
+                    <p className="text-[12px] text-slate-400 mt-0.5">{fmtTime(booking.departAt)}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-[14px]">{booking.destination?.name}</p>
+                    <p className="text-[12px] text-slate-400 mt-0.5">{fmtTime(booking.arriveAt)}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-2">
+                {booking.serviceDate && (
+                  <p className="text-[13px] text-slate-500">Tanggal: <span className="font-semibold text-slate-700">{booking.serviceDate}</span></p>
+                )}
+                {booking.departAt && (
+                  <p className="text-[13px] text-slate-500">Berangkat: <span className="font-semibold text-slate-700">{fmtTime(booking.departAt)}</span></p>
+                )}
+              </div>
+            )}
           </div>
 
           <Separator className="bg-slate-100" />

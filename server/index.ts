@@ -48,8 +48,8 @@ app.addHook('onRequest', async (req, reply) => {
 
     if (!res.ok && req.url.includes('/bookings')) {
       console.log(`[proxy] ${req.method} ${req.url} -> ${res.status}`);
-      console.log('[proxy] request body:', rawBody);
-      console.log('[proxy] response:', JSON.stringify(body));
+      if (rawBody) console.log('[proxy] request body:', rawBody);
+      console.log('[proxy] response:', JSON.stringify(body).substring(0, 2000));
     }
 
     reply.status(res.status);
