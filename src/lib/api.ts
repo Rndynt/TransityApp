@@ -369,14 +369,36 @@ export interface PaymentMethod {
   enabled: boolean;
 }
 
+function normalizePaymentType(type: string): PaymentMethod['type'] {
+  switch (type) {
+    case 'qr': case 'qris': return 'qris';
+    case 'va': case 'virtual_account': return 'virtual_account';
+    case 'transfer': case 'bank_transfer': return 'bank_transfer';
+    case 'ewallet': return 'ewallet';
+    default: return 'other';
+  }
+}
+
+function normalizePaymentMethods(raw: unknown[]): PaymentMethod[] {
+  return raw.map((m: any) => ({
+    id: m.id,
+    name: m.name,
+    type: normalizePaymentType(m.type || ''),
+    description: m.description,
+    icon: m.icon,
+    enabled: m.enabled !== undefined ? !!m.enabled : true,
+  }));
+}
+
 export const paymentsApi = {
   getMethods: async (): Promise<PaymentMethod[]> => {
     try {
-      const res = await api.get<PaymentMethod[] | { methods: PaymentMethod[] } | { data: PaymentMethod[] }>('/api/gateway/payments/methods');
-      if (Array.isArray(res)) return res;
-      if (res && typeof res === 'object' && Array.isArray((res as { methods: PaymentMethod[] }).methods)) return (res as { methods: PaymentMethod[] }).methods;
-      if (res && typeof res === 'object' && Array.isArray((res as { data: PaymentMethod[] }).data)) return (res as { data: PaymentMethod[] }).data;
-      return [];
+      const res = await api.get<PaymentMethod[] | { methods: unknown[] } | { data: unknown[] }>('/api/gateway/payments/methods');
+      let raw: unknown[] = [];
+      if (Array.isArray(res)) raw = res;
+      else if (res && typeof res === 'object' && Array.isArray((res as any).methods)) raw = (res as any).methods;
+      else if (res && typeof res === 'object' && Array.isArray((res as any).data)) raw = (res as any).data;
+      return normalizePaymentMethods(raw);
     } catch {
       return [];
     }
