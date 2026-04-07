@@ -297,6 +297,7 @@ function CityBottomSheet({ open, title, cities, onSelect, onClose }: {
 }) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -307,6 +308,9 @@ function CityBottomSheet({ open, title, cities, onSelect, onClose }: {
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden';
+      if (sheetRef.current) {
+        sheetRef.current.style.height = `${window.innerHeight * 0.85}px`;
+      }
     } else {
       document.body.style.overflow = '';
     }
@@ -327,17 +331,18 @@ function CityBottomSheet({ open, title, cities, onSelect, onClose }: {
         onClick={onClose}
       />
       <div
+        ref={sheetRef}
         className={cn(
           'fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-[1.5rem] transition-transform duration-300 ease-out',
-          'max-h-[85vh] flex flex-col',
+          'flex flex-col',
           open ? 'translate-y-0' : 'translate-y-full',
         )}
       >
-        <div className="flex justify-center pt-3 pb-1">
+        <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-10 h-1 rounded-full bg-slate-200" />
         </div>
 
-        <div className="flex items-center justify-between px-5 pb-3">
+        <div className="flex items-center justify-between px-5 pb-3 shrink-0">
           <h2 className="text-[16px] font-bold text-slate-800">{title}</h2>
           <button
             onClick={onClose}
@@ -348,7 +353,7 @@ function CityBottomSheet({ open, title, cities, onSelect, onClose }: {
           </button>
         </div>
 
-        <div className="px-5 pb-3">
+        <div className="px-5 pb-3 shrink-0">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-slate-300 pointer-events-none" />
             <input
@@ -363,7 +368,7 @@ function CityBottomSheet({ open, title, cities, onSelect, onClose }: {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto overscroll-contain pb-8">
+        <div className="flex-1 overflow-y-auto overscroll-contain pb-8 min-h-0">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center py-12 gap-2">
               <MapPin className="w-10 h-10 text-slate-200" />

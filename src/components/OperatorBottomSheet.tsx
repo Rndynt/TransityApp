@@ -15,6 +15,7 @@ interface Props {
 export default function OperatorBottomSheet({ open, operators, selected, onSelect, onClose }: Props) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -26,6 +27,9 @@ export default function OperatorBottomSheet({ open, operators, selected, onSelec
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden';
+      if (sheetRef.current) {
+        sheetRef.current.style.height = `${window.innerHeight * 0.85}px`;
+      }
     } else {
       document.body.style.overflow = '';
     }
@@ -51,9 +55,10 @@ export default function OperatorBottomSheet({ open, operators, selected, onSelec
         onClick={onClose}
       />
       <div
+        ref={sheetRef}
         className={cn(
           'fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-[1.5rem] transition-transform duration-300 ease-out shadow-[0_-4px_30px_rgba(0,0,0,0.12)]',
-          'max-h-[85vh] flex flex-col pb-20',
+          'flex flex-col pb-20',
           open ? 'translate-y-0' : 'translate-y-full',
         )}
       >
