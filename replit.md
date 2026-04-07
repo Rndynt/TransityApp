@@ -63,16 +63,20 @@ Semua API request diarahkan ke Console Gateway. Auth terpusat di Console — sat
 3. SelectStopsPage → pilih titik naik/turun (filter pakai `boardingAllowed`/`alightingAllowed`)
 4. **Materialize** — trip virtual di-materialize lewat `POST /api/gateway/trips/materialize`
 5. SelectSeatsPage → pilih kursi dari seatmap
-6. BookingConfirmPage → isi data penumpang → klik "Pilih Pembayaran"
-7. PaymentPage → pilih metode pembayaran, input voucher/promo, rincian harga → klik "Bayar"
-8. BookingDetailPage → detail pesanan setelah berhasil
+6. BookingConfirmPage → isi data penumpang → klik "Pilih Pembayaran" → **booking dibuat dengan status `held`** (kursi ter-reserve, belum bayar)
+7. PaymentPage → countdown timer `holdExpiresAt`, pilih metode pembayaran, input voucher/promo → klik "Bayar" → `POST /api/gateway/bookings/{id}/pay`
+8. BookingDetailPage → detail pesanan setelah berhasil dibayar
 
-### Payment
-- Halaman pembayaran (`src/pages/PaymentPage.tsx`) terpisah dari konfirmasi penumpang
-- Metode pembayaran diambil dari `GET /api/gateway/payments/methods` — jika API belum ada, fallback ke daftar default (QRIS, e-wallet, transfer bank, virtual account)
+### Payment & Hold Flow
+- Saat klik "Pilih Pembayaran", booking langsung dibuat tanpa `paymentMethod` → status `held` + `holdExpiresAt`
+- Kursi sudah ter-reserve di Terminal sehingga tidak bisa diambil orang lain
+- PaymentPage menampilkan countdown timer dari `holdExpiresAt`
+- Jika waktu habis: tombol bayar disabled, user diarahkan kembali
+- Pesanan `held` muncul di "Pesanan Saya" (MyTripsPage) dengan countdown timer
+- Pembayaran via `POST /api/gateway/bookings/{id}/pay` dengan `paymentMethod` + opsional `voucherCode`
+- Metode pembayaran diambil dari `GET /api/gateway/payments/methods` — jika API belum ada, fallback ke daftar default
 - Input voucher/promo dengan validasi via `POST /api/gateway/vouchers/validate` — jika API belum ada, menampilkan error "tidak valid"
-- Rincian harga: subtotal, diskon voucher, total
-- Payment method dikirim ke booking API via field `paymentMethod`
+- Console API requirements didokumentasikan di `docs/console-api-requirements.md`
 
 ### Profile
 - Info akun (nama, email, HP, tanggal bergabung)

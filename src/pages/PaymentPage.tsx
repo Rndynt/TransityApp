@@ -1,23 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNav } from '@/App';
-import { bookingsApi, paymentsApi, type CreateBookingData, type PaymentMethod } from '@/lib/api';
+import { bookingsApi, paymentsApi, type PayBookingData, type PaymentMethod } from '@/lib/api';
 import { fmtCurrency, fmtTime } from '@/lib/utils';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Loader2, CreditCard, Wallet, QrCode, Building2, Smartphone, Tag, X, Check, ChevronRight, TicketPercent } from 'lucide-react';
+import { Loader2, CreditCard, Wallet, QrCode, Building2, Smartphone, Tag, X, Check, ChevronRight, TicketPercent, Clock, AlertTriangle } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import { cn } from '@/lib/utils';
 
 interface Props {
-  tripId: string;
-  serviceDate: string;
-  originStopId: string;
-  destStopId: string;
-  originSeq: number;
-  destSeq: number;
-  seats: string[];
+  bookingId: string;
+  holdExpiresAt: string | null;
   tripLabel: string;
   fare: number;
+  seats: string[];
   originStopName?: string;
   destStopName?: string;
   originTime?: string;
@@ -57,7 +53,41 @@ function getMethodGroupLabel(type: PaymentMethod['type']) {
   }
 }
 
-export default function PaymentPage({ tripId, serviceDate, originStopId, destStopId, originSeq, destSeq, seats, tripLabel, fare, originStopName, destStopName, originTime, destTime, passengers }: Props) {
+function useCountdown(expiresAt: string | null) {
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!expiresAt) {
+      setRemaining(null);
+      return;
+    }
+
+    const calc = () => {
+      const diff = new Date(expiresAt).getTime() - Date.now();
+      return Math.max(0, Math.floor(diff / 1000));
+    };
+
+    setRemaining(calc());
+    intervalRef.current = setInterval(() => {
+      const val = calc();
+      setRemaining(val);
+      if (val <= 0 && intervalRef.current) clearInterval(intervalRef.current);
+    }, 1000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [expiresAt]);
+
+  if (remaining === null) return { expired: false, minutes: 0, seconds: 0, totalSeconds: null, formatted: '' };
+  const minutes = Math.floor(remaining / 60);
+  const seconds = remaining % 60;
+  const formatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  return { expired: remaining <= 0, minutes, seconds, totalSeconds: remaining, formatted };
+}
+
+export default function PaymentPage({ bookingId, holdExpiresAt, tripLabel, fare, seats, originStopName, destStopName, originTime, destTime, passengers }: Props) {
   const { navigate, goBack } = useNav();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [voucherCode, setVoucherCode] = useState('');
@@ -65,6 +95,8 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
   const [voucherError, setVoucherError] = useState('');
   const [voucherLoading, setVoucherLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const countdown = useCountdown(holdExpiresAt);
 
   const { data: apiMethods } = useQuery({
     queryKey: ['payment-methods'],
@@ -87,15 +119,15 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
 
   const groupOrder: PaymentMethod['type'][] = ['qris', 'ewallet', 'virtual_account', 'bank_transfer', 'other'];
 
-  const mutation = useMutation({
-    mutationFn: (data: CreateBookingData) => bookingsApi.create(data),
-    onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.bookingId, source: 'gateway' }),
+  const payMutation = useMutation({
+    mutationFn: (data: PayBookingData) => bookingsApi.pay(bookingId, data),
+    onSuccess: (booking) => navigate({ name: 'booking-detail', bookingId: booking.bookingId || bookingId, source: 'gateway' }),
     onError: (err: any) => {
       if (err?.code === 'TERMINAL_ERROR') {
-        setError('Gagal membuat pesanan. Sistem operator sedang bermasalah, silakan coba lagi nanti.');
+        setError('Gagal memproses pembayaran. Sistem operator sedang bermasalah, silakan coba lagi nanti.');
         return;
       }
-      setError(err?.message || 'Terjadi kesalahan');
+      setError(err?.message || 'Terjadi kesalahan saat memproses pembayaran');
     },
   });
 
@@ -103,7 +135,7 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
     if (!voucherCode.trim()) return;
     setVoucherLoading(true);
     setVoucherError('');
-    const result = await paymentsApi.validateVoucher(voucherCode.trim(), tripId, subtotal);
+    const result = await paymentsApi.validateVoucher(voucherCode.trim(), bookingId, subtotal);
     setVoucherLoading(false);
     if (result.valid && result.discount > 0) {
       setVoucherApplied({ code: voucherCode.trim().toUpperCase(), discount: result.discount });
@@ -118,19 +150,66 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
       setError('Pilih metode pembayaran terlebih dahulu');
       return;
     }
+    if (countdown.expired) {
+      setError('Waktu pemesanan telah habis. Silakan ulangi pemesanan.');
+      return;
+    }
     setError('');
-    mutation.mutate({
-      tripId, serviceDate, originStopId, destinationStopId: destStopId, originSeq, destinationSeq: destSeq,
-      passengers,
-      paymentMethod: selectedMethod,
-    });
+    const data: PayBookingData = { paymentMethod: selectedMethod };
+    if (voucherApplied) data.voucherCode = voucherApplied.code;
+    payMutation.mutate(data);
   };
+
+  const handleExpiredBack = () => {
+    navigate({ name: 'my-trips' });
+  };
+
+  const isUrgent = countdown.totalSeconds !== null && countdown.totalSeconds <= 120 && !countdown.expired;
 
   return (
     <div className="anim-fade">
       <PageHeader title="Pembayaran" onBack={goBack} />
 
       <div className="px-4 pt-4 pb-40">
+        {holdExpiresAt && (
+          <div className={cn(
+            'flex items-center gap-3 px-4 py-3 rounded-2xl mb-3 anim-slide-up',
+            countdown.expired
+              ? 'bg-red-50 border border-red-200/60'
+              : isUrgent
+                ? 'bg-amber-50 border border-amber-200/60'
+                : 'bg-teal-50 border border-teal-200/60',
+          )}>
+            {countdown.expired ? (
+              <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+            ) : (
+              <Clock className={cn('w-5 h-5 shrink-0', isUrgent ? 'text-amber-500' : 'text-teal-600')} />
+            )}
+            <div className="flex-1">
+              {countdown.expired ? (
+                <>
+                  <p className="text-[13px] font-bold text-red-700">Waktu pemesanan habis</p>
+                  <p className="text-[11px] text-red-500">Kursi tidak lagi dipesan untukmu. Silakan ulangi pemesanan.</p>
+                </>
+              ) : (
+                <>
+                  <p className={cn('text-[11px] font-medium', isUrgent ? 'text-amber-600' : 'text-teal-600')}>Selesaikan pembayaran dalam</p>
+                  <p className={cn('text-[20px] font-display font-extrabold tabular-nums', isUrgent ? 'text-amber-700' : 'text-teal-800')}>{countdown.formatted}</p>
+                </>
+              )}
+            </div>
+            {countdown.expired && (
+              <Button
+                variant="outline"
+                className="h-9 px-4 rounded-xl text-[12px] font-bold border-red-300 text-red-600 hover:bg-red-100"
+                onClick={handleExpiredBack}
+              >
+                Kembali
+              </Button>
+            )}
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl shadow-soft overflow-hidden anim-slide-up">
           <div className="px-4 pt-4 pb-3">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Ringkasan</p>
@@ -239,11 +318,14 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
                         <button
                           key={m.id}
                           onClick={() => setSelectedMethod(m.id)}
+                          disabled={countdown.expired}
                           className={cn(
                             'w-full flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all text-left',
-                            isSelected
-                              ? 'border-teal-500 bg-teal-50/60 ring-1 ring-teal-500/20'
-                              : 'border-slate-150 bg-white hover:bg-slate-50/80',
+                            countdown.expired
+                              ? 'opacity-50 cursor-not-allowed border-slate-150 bg-slate-50'
+                              : isSelected
+                                ? 'border-teal-500 bg-teal-50/60 ring-1 ring-teal-500/20'
+                                : 'border-slate-150 bg-white hover:bg-slate-50/80',
                           )}
                         >
                           <div className={cn(
@@ -304,14 +386,14 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
           <Button
             className="w-full h-13 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[15px] font-bold shadow-lg shadow-teal-900/15 transition-all active:scale-[0.97] gap-2"
             onClick={handlePay}
-            disabled={mutation.isPending || !selectedMethod}
+            disabled={payMutation.isPending || !selectedMethod || countdown.expired}
           >
-            {mutation.isPending ? (
+            {payMutation.isPending ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <CreditCard className="w-5 h-5" />
             )}
-            Bayar {fmtCurrency(total)}
+            {countdown.expired ? 'Waktu Habis' : `Bayar ${fmtCurrency(total)}`}
           </Button>
         </div>
       </div>

@@ -1,15 +1,45 @@
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNav, useAuth } from '@/App';
 import { bookingsApi, type BookingListItem } from '@/lib/api';
 import { fmtCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Ticket, ChevronRight, LogIn, CalendarDays, Search } from 'lucide-react';
+import { Ticket, ChevronRight, LogIn, CalendarDays, Search, Clock } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import { BookingCardSkeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+
+function HoldCountdown({ expiresAt }: { expiresAt: string }) {
+  const [remaining, setRemaining] = useState(() => {
+    const diff = new Date(expiresAt).getTime() - Date.now();
+    return Math.max(0, Math.floor(diff / 1000));
+  });
+
+  useEffect(() => {
+    if (remaining <= 0) return;
+    const timer = setInterval(() => {
+      const diff = new Date(expiresAt).getTime() - Date.now();
+      const val = Math.max(0, Math.floor(diff / 1000));
+      setRemaining(val);
+      if (val <= 0) clearInterval(timer);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [expiresAt]);
+
+  if (remaining <= 0) return <span className="text-[11px] text-red-500 font-medium">Kedaluwarsa</span>;
+  const m = Math.floor(remaining / 60);
+  const s = remaining % 60;
+  const isUrgent = remaining <= 120;
+  return (
+    <span className={cn('flex items-center gap-1 text-[11px] font-semibold tabular-nums', isUrgent ? 'text-amber-600' : 'text-teal-600')}>
+      <Clock className="w-3 h-3" />
+      {String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}
+    </span>
+  );
+}
 
 const STATUS_CFG: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'destructive' | 'secondary' }> = {
   held: { label: 'Menunggu', variant: 'warning' },
@@ -27,7 +57,8 @@ export default function MyTripsPage() {
     queryKey: ['bookings'],
     queryFn: () => bookingsApi.list(),
     enabled: !!user,
-  });
+    refetchInterval: bookings?.some(b => b.status === 'held' && b.holdExpiresAt) ? 30000 : false,
+  } as any);
 
   const activeCount = bookings?.filter(b => b.status === 'confirmed' || b.status === 'held').length ?? 0;
 
@@ -127,7 +158,12 @@ export default function MyTripsPage() {
                   </div>
 
                   <div className="flex justify-between items-center pt-2 border-t border-dashed border-slate-100">
-                    <span className="text-[12px] text-slate-400">{b.passengerCount} penumpang</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] text-slate-400">{b.passengerCount} penumpang</span>
+                      {b.status === 'held' && b.holdExpiresAt && (
+                        <HoldCountdown expiresAt={b.holdExpiresAt} />
+                      )}
+                    </div>
                     <span className="font-display font-bold text-[15px] text-teal-800">{fmtCurrency(b.totalAmount)}</span>
                   </div>
                 </div>

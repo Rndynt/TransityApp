@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNav } from '@/App';
 import { bookingsApi } from '@/lib/api';
@@ -5,11 +6,48 @@ import { fmtCurrency, fmtTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, QrCode, Users, XCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, QrCode, Users, XCircle, CheckCircle2, CreditCard, Clock } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import { QRCodeSVG } from 'qrcode.react';
 import { cn } from '@/lib/utils';
 import { BookingDetailSkeleton } from '@/components/ui/skeleton';
+
+function HoldTimer({ expiresAt }: { expiresAt: string }) {
+  const [remaining, setRemaining] = useState(() => {
+    const diff = new Date(expiresAt).getTime() - Date.now();
+    return Math.max(0, Math.floor(diff / 1000));
+  });
+
+  useEffect(() => {
+    if (remaining <= 0) return;
+    const timer = setInterval(() => {
+      const diff = new Date(expiresAt).getTime() - Date.now();
+      const val = Math.max(0, Math.floor(diff / 1000));
+      setRemaining(val);
+      if (val <= 0) clearInterval(timer);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [expiresAt]);
+
+  if (remaining <= 0) return null;
+  const m = Math.floor(remaining / 60);
+  const s = remaining % 60;
+  const isUrgent = remaining <= 120;
+  return (
+    <div className={cn(
+      'flex items-center gap-3 px-4 py-3 rounded-2xl mb-3',
+      isUrgent ? 'bg-amber-50 border border-amber-200/60' : 'bg-teal-50 border border-teal-200/60',
+    )}>
+      <Clock className={cn('w-5 h-5 shrink-0', isUrgent ? 'text-amber-500' : 'text-teal-600')} />
+      <div className="flex-1">
+        <p className={cn('text-[11px] font-medium', isUrgent ? 'text-amber-600' : 'text-teal-600')}>Selesaikan pembayaran dalam</p>
+        <p className={cn('text-[20px] font-display font-extrabold tabular-nums', isUrgent ? 'text-amber-700' : 'text-teal-800')}>
+          {String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 interface Props {
   bookingId: string;
@@ -25,7 +63,7 @@ const STATUS_CFG: Record<string, { label: string; variant: 'default' | 'success'
 };
 
 export default function BookingDetailPage({ bookingId, source }: Props) {
-  const { goBack } = useNav();
+  const { navigate, goBack } = useNav();
   const queryClient = useQueryClient();
 
   const { data: booking, isLoading, error } = useQuery({
@@ -65,6 +103,10 @@ export default function BookingDetailPage({ bookingId, source }: Props) {
       />
 
       <div className="px-4 pt-4 pb-24">
+        {booking.status === 'held' && booking.holdExpiresAt && (
+          <HoldTimer expiresAt={booking.holdExpiresAt} />
+        )}
+
         <div className="bg-white rounded-2xl shadow-soft overflow-hidden anim-slide-up">
           <div className="p-4">
             <p className="font-bold text-[16px] text-slate-800 mb-3">{booking.patternName || booking.patternCode || booking.operatorName || 'Detail Perjalanan'}</p>
@@ -134,8 +176,32 @@ export default function BookingDetailPage({ bookingId, source }: Props) {
           </div>
         )}
 
+        {booking.status === 'held' && booking.holdExpiresAt && new Date(booking.holdExpiresAt).getTime() > Date.now() && (
+          <div className="mt-4 anim-slide-up delay-2">
+            <Button
+              className="w-full h-13 rounded-2xl bg-teal-900 hover:bg-teal-950 text-[15px] font-bold shadow-lg shadow-teal-900/15 transition-all active:scale-[0.97] gap-2"
+              onClick={() => navigate({
+                name: 'payment',
+                bookingId: booking.id || booking.bookingId || bookingId,
+                holdExpiresAt: booking.holdExpiresAt,
+                tripLabel: booking.patternName || booking.patternCode || 'Perjalanan',
+                fare: booking.passengers?.length > 0 ? Math.round(Number(booking.totalAmount || 0) / booking.passengers.length) : Number(booking.totalAmount || 0),
+                seats: booking.passengers?.map(p => p.seatNo) || [],
+                originStopName: booking.origin?.name || undefined,
+                destStopName: booking.destination?.name || undefined,
+                originTime: booking.departAt || undefined,
+                destTime: booking.arriveAt || undefined,
+                passengers: booking.passengers?.map(p => ({ fullName: p.fullName, phone: undefined, seatNo: p.seatNo })) || [],
+              })}
+            >
+              <CreditCard className="w-5 h-5" />
+              Bayar Sekarang
+            </Button>
+          </div>
+        )}
+
         {(booking.status === 'held' || booking.status === 'confirmed') && (
-          <div className="mt-6 anim-slide-up delay-2">
+          <div className="mt-3 anim-slide-up delay-3">
             <Button
               variant="outline"
               className="w-full h-12 rounded-2xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 font-bold text-[13px]"

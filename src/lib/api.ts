@@ -121,6 +121,7 @@ export interface BookingListItem {
   destination: StopSummary | null;
   passengerCount: number;
   createdAt?: string | null;
+  holdExpiresAt?: string | null;
 }
 
 export interface BookingDetail {
@@ -187,7 +188,12 @@ export interface CreateBookingData {
   originSeq: number;
   destinationSeq: number;
   passengers: Array<{ fullName: string; phone?: string; idNumber?: string; seatNo: string }>;
+  paymentMethod?: string;
+}
+
+export interface PayBookingData {
   paymentMethod: string;
+  voucherCode?: string;
 }
 
 function getToken(): string | null {
@@ -396,6 +402,8 @@ export const bookingsApi = {
   }),
   getDetail: (id: string) => api.get<BookingDetail>(`/api/gateway/bookings/${id}`),
   cancel: (id: string) => api.post<{ success: boolean }>(`/api/gateway/bookings/${id}/cancel`, {}),
+  pay: (bookingId: string, data: PayBookingData) =>
+    api.post<GatewayBookingResponse>(`/api/gateway/bookings/${bookingId}/pay`, data as unknown as Record<string, unknown>),
 };
 
 export const store = {
