@@ -163,28 +163,38 @@ export default function HomePage() {
               </div>
             </div>
 
-            {operators.length > 0 && (
-              <div className="mt-4">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.08em] mb-1.5 block">Operator</Label>
-                <button
-                  onClick={() => setOperatorSheetOpen(true)}
-                  className="w-full h-12 flex items-center gap-3 px-3 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-teal-50/30 transition-colors text-left"
-                  data-testid="button-operator-select"
-                >
-                  {selectedOp ? (
+            <div className="mt-4">
+              <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.08em] mb-1.5 block">Operator</Label>
+              <button
+                onClick={() => !loading && setOperatorSheetOpen(true)}
+                className={cn(
+                  'w-full h-12 flex items-center gap-3 px-3 rounded-xl border border-slate-200/80 bg-slate-50/50 text-left transition-colors',
+                  loading ? 'cursor-default' : 'hover:bg-teal-50/30',
+                )}
+                data-testid="button-operator-select"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 animate-pulse shrink-0" />
+                    <div className="flex-1 h-4 bg-slate-100 rounded-md animate-pulse" />
+                  </>
+                ) : selectedOp ? (
+                  <>
                     <OperatorLogo name={selectedOp.name} logo={selectedOp.logo} color={selectedOp.color} size="sm" />
-                  ) : (
+                    <span className="flex-1 text-[14px] font-medium text-slate-900">{selectedOp.name}</span>
+                    <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+                  </>
+                ) : (
+                  <>
                     <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center shrink-0">
                       <Bus className="w-4 h-4 text-teal-600" />
                     </div>
-                  )}
-                  <span className={cn('flex-1 text-[14px] font-medium', selectedOp ? 'text-slate-900' : 'text-slate-400')}>
-                    {selectedOp ? selectedOp.name : 'Semua Operator'}
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
-                </button>
-              </div>
-            )}
+                    <span className="flex-1 text-[14px] font-medium text-slate-400">Semua Operator</span>
+                    <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+                  </>
+                )}
+              </button>
+            </div>
 
             <Button
               onClick={search}
