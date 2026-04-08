@@ -55,8 +55,9 @@ interface Props {
 }
 
 const STATUS_CFG: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'destructive' | 'secondary'; icon: typeof CheckCircle2 }> = {
-  held: { label: 'Menunggu Bayar', variant: 'warning', icon: QrCode },
+  held: { label: 'Menunggu Pembayaran', variant: 'warning', icon: QrCode },
   confirmed: { label: 'Terkonfirmasi', variant: 'success', icon: CheckCircle2 },
+  confirmed_unpaid: { label: 'Menunggu Pembayaran', variant: 'warning', icon: QrCode },
   completed: { label: 'Selesai', variant: 'secondary', icon: CheckCircle2 },
   cancelled: { label: 'Dibatalkan', variant: 'destructive', icon: XCircle },
   expired: { label: 'Kedaluwarsa', variant: 'destructive', icon: XCircle },
@@ -100,7 +101,8 @@ export default function BookingDetailPage({ bookingId, source }: Props) {
     );
   }
 
-  const st = STATUS_CFG[booking.status || ''] || { label: booking.status, variant: 'secondary' as const, icon: QrCode };
+  const statusKey = (booking.status === 'confirmed' && !booking.paymentMethod) ? 'confirmed_unpaid' : (booking.status || '');
+  const st = STATUS_CFG[statusKey] || { label: booking.status, variant: 'secondary' as const, icon: QrCode };
 
   return (
     <div className="anim-fade">

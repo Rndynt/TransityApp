@@ -44,16 +44,29 @@ function HoldCountdown({ expiresAt }: { expiresAt: string }) {
   );
 }
 
-const STATUS_CFG: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'destructive' | 'secondary'; bg: string; text: string; dot: string }> = {
-  held: { label: 'Menunggu Bayar', variant: 'warning', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
-  confirmed: { label: 'Aktif', variant: 'success', bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-400' },
+type StatusStyle = { label: string; variant: string; bg: string; text: string; dot: string };
+
+const STATUS_CFG: Record<string, StatusStyle> = {
+  held: { label: 'Menunggu Pembayaran', variant: 'warning', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
+  confirmed_paid: { label: 'Terkonfirmasi', variant: 'success', bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-400' },
+  confirmed_unpaid: { label: 'Menunggu Pembayaran', variant: 'warning', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
   completed: { label: 'Selesai', variant: 'secondary', bg: 'bg-slate-100', text: 'text-slate-500', dot: 'bg-slate-400' },
   cancelled: { label: 'Dibatalkan', variant: 'destructive', bg: 'bg-red-50', text: 'text-red-600', dot: 'bg-red-400' },
   expired: { label: 'Kedaluwarsa', variant: 'destructive', bg: 'bg-red-50', text: 'text-red-600', dot: 'bg-red-400' },
 };
 
-function StatusPill({ status }: { status: string }) {
-  const cfg = STATUS_CFG[status] || { label: status, bg: 'bg-slate-100', text: 'text-slate-500', dot: 'bg-slate-400' };
+function getDisplayStatus(booking: BookingListItem): StatusStyle {
+  if (booking.status === 'confirmed' && !booking.paymentMethod) {
+    return STATUS_CFG['confirmed_unpaid'];
+  }
+  if (booking.status === 'confirmed') {
+    return STATUS_CFG['confirmed_paid'];
+  }
+  return STATUS_CFG[booking.status || ''] || { label: booking.status || 'Unknown', variant: 'secondary', bg: 'bg-slate-100', text: 'text-slate-500', dot: 'bg-slate-400' };
+}
+
+function StatusPill({ booking }: { booking: BookingListItem }) {
+  const cfg = getDisplayStatus(booking);
   return (
     <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide', cfg.bg, cfg.text)}>
       <span className={cn('w-1.5 h-1.5 rounded-full', cfg.dot)} />
@@ -99,7 +112,7 @@ function TicketCard({ booking, index, onClick }: { booking: BookingListItem; ind
                 </p>
               </div>
             </div>
-            <StatusPill status={booking.status || 'unknown'} />
+            <StatusPill booking={booking} />
           </div>
 
           {hasRoute ? (

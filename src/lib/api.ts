@@ -127,6 +127,7 @@ export interface BookingListItem {
   seatNumbers: string[];
   createdAt?: string | null;
   holdExpiresAt?: string | null;
+  paymentMethod?: string | null;
 }
 
 function isEmptyStop(stop: any): boolean {
@@ -158,6 +159,7 @@ function normalizeBookingListItem(raw: any): BookingListItem {
     seatNumbers: raw.seatNumbers || [],
     createdAt: raw.createdAt || null,
     holdExpiresAt: raw.holdExpiresAt || null,
+    paymentMethod: raw.paymentMethod || null,
   };
 }
 
@@ -201,6 +203,7 @@ function normalizeBookingDetail(raw: any): BookingDetail {
     totalAmount: (() => { const a = raw.finalAmount || raw.totalAmount; return (a && a !== '0' && a !== '0.00') ? a : (raw.farePerPerson && passengers.length > 0 ? String(Number(raw.farePerPerson) * passengers.length) : a); })(),
     channel: raw.channel || null,
     holdExpiresAt: raw.holdExpiresAt || null,
+    paymentMethod: raw.paymentMethod || null,
     qrData: raw.qrData || [],
     passengers,
     payments: raw.payments || [],
@@ -226,6 +229,7 @@ export interface BookingDetail {
   totalAmount: string | null;
   channel: string | null;
   holdExpiresAt: string | null;
+  paymentMethod?: string | null;
   qrData: QrDataItem[];
   passengers: PassengerInfo[];
   payments: Array<{
