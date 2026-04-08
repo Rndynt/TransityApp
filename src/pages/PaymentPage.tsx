@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, CreditCard, Wallet, QrCode, Building2, Smartphone, Tag, X, Check, ChevronRight, TicketPercent, Clock, AlertTriangle, LogOut } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import ConfirmSheet from '@/components/ConfirmSheet';
+import PaymentLogo from '@/components/PaymentLogo';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -342,7 +343,6 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">{getMethodGroupLabel(type)}</p>
                   <div className="space-y-1.5">
                     {group.map((m) => {
-                      const Icon = getMethodIcon(m.type);
                       const isSelected = selectedMethod === m.id;
                       const isDisabled = countdown.expired;
                       return (
@@ -359,12 +359,7 @@ export default function PaymentPage({ tripId, serviceDate, originStopId, destSto
                                 : 'border-slate-150 bg-white hover:bg-slate-50/80',
                           )}
                         >
-                          <div className={cn(
-                            'w-9 h-9 rounded-lg flex items-center justify-center shrink-0',
-                            isSelected ? 'bg-teal-100' : 'bg-slate-100',
-                          )}>
-                            <Icon className={cn('w-4.5 h-4.5', isSelected ? 'text-teal-600' : 'text-slate-400')} />
-                          </div>
+                          <PaymentLogo methodId={m.id} size="sm" selected={isSelected} />
                           <div className="flex-1 min-w-0">
                             <p className={cn('text-[13px] font-semibold', isSelected ? 'text-teal-800' : 'text-slate-700')}>{m.name}</p>
                             {m.description && (
